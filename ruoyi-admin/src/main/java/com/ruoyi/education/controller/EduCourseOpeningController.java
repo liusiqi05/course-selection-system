@@ -1,0 +1,188 @@
+package com.ruoyi.education.controller;
+
+import java.util.List;
+import javax.servlet.http.HttpServletResponse;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import com.ruoyi.common.annotation.Log;
+import com.ruoyi.common.core.controller.BaseController;
+import com.ruoyi.common.core.domain.AjaxResult;
+import com.ruoyi.common.core.domain.entity.SysUser;
+import com.ruoyi.common.enums.BusinessType;
+import com.ruoyi.common.utils.SecurityUtils;
+import com.ruoyi.education.domain.EduCourseOpening;
+import com.ruoyi.education.domain.EduTeacher;
+import com.ruoyi.education.service.IEduCourseOpeningService;
+import com.ruoyi.education.service.IEduTeacherService;
+import com.ruoyi.common.utils.poi.ExcelUtil;
+import com.ruoyi.common.core.page.TableDataInfo;
+
+/**
+ * 开课安排Controller
+ * 
+ * @author ruoyi
+ * @date 2025-12-18
+ */
+@RestController
+@RequestMapping("/education/opening")
+public class EduCourseOpeningController extends BaseController
+{
+    @Autowired
+    private IEduCourseOpeningService eduCourseOpeningService;
+
+    @Autowired
+    private IEduTeacherService eduTeacherService;
+
+    /**
+     * 查询开课安排列表
+     */
+    @PreAuthorize("@ss.hasPermi('education:opening:list')")
+    @GetMapping("/list")
+    public TableDataInfo list(EduCourseOpening eduCourseOpening)
+    {
+        startPage();
+        List<EduCourseOpening> list = eduCourseOpeningService.selectEduCourseOpeningList(eduCourseOpening);
+        return getDataTable(list);
+    }
+
+    /**
+     * 查询可选课程列表（学生选课用）
+     */
+    @GetMapping("/available")
+    public TableDataInfo availableList(EduCourseOpening eduCourseOpening)
+    {
+        startPage();
+        List<EduCourseOpening> list = eduCourseOpeningService.selectAvailableCourseList(eduCourseOpening);
+        return getDataTable(list);
+    }
+
+    /**
+     * 导出开课安排列表
+     */
+    @PreAuthorize("@ss.hasPermi('education:opening:export')")
+    @Log(title = "开课安排", businessType = BusinessType.EXPORT)
+    @PostMapping("/export")
+    public void export(HttpServletResponse response, EduCourseOpening eduCourseOpening)
+    {
+        List<EduCourseOpening> list = eduCourseOpeningService.selectEduCourseOpeningList(eduCourseOpening);
+        ExcelUtil<EduCourseOpening> util = new ExcelUtil<EduCourseOpening>(EduCourseOpening.class);
+        util.exportExcel(response, list, "开课安排数据");
+    }
+
+    /**
+     * 获取开课安排详细信息
+     */
+    @PreAuthorize("@ss.hasPermi('education:opening:query')")
+    @GetMapping(value = "/{openId}")
+    public AjaxResult getInfo(@PathVariable("openId") Long openId)
+    {
+        return success(eduCourseOpeningService.selectEduCourseOpeningByOpenId(openId));
+    }
+
+    /**
+     * 新增开课安排
+     */
+    @PreAuthorize("@ss.hasPermi('education:opening:add')")
+    @Log(title = "开课安排", businessType = BusinessType.INSERT)
+    @PostMapping
+    public AjaxResult add(@RequestBody EduCourseOpening eduCourseOpening)
+    {
+        return toAjax(eduCourseOpeningService.insertEduCourseOpening(eduCourseOpening));
+    }
+
+    /**
+     * 修改开课安排
+     */
+    @PreAuthorize("@ss.hasPermi('education:opening:edit')")
+    @Log(title = "开课安排", businessType = BusinessType.UPDATE)
+    @PutMapping
+    public AjaxResult edit(@RequestBody EduCourseOpening eduCourseOpening)
+    {
+        return toAjax(eduCourseOpeningService.updateEduCourseOpening(eduCourseOpening));
+    }
+
+    /**
+     * 删除开课安排
+     */
+    @PreAuthorize("@ss.hasPermi('education:opening:remove')")
+    @Log(title = "开课安排", businessType = BusinessType.DELETE)
+	@DeleteMapping("/{openIds}")
+    public AjaxResult remove(@PathVariable Long[] openIds)
+    {
+        return toAjax(eduCourseOpeningService.deleteEduCourseOpeningByOpenIds(openIds));
+    }
+
+    /**
+     * 查询教师自己的开课列表（我的课程）
+     */
+    @GetMapping("/myCourses")
+    public TableDataInfo myCourseList(EduCourseOpening eduCourseOpening)
+    {
+        // 获取当前登录用户
+        Long userId = SecurityUtils.getUserId();
+        // 根据userId获取teacherId
+        EduTeacher teacher = eduTeacherService.selectEduTeacherByUserId(userId);
+        if (teacher == null)
+        {
+            return getDataTable(java.util.Collections.emptyList());
+        }
+        eduCourseOpening.setTeacherId(teacher.getTeacherId());
+        startPage();
+        List<EduCourseOpening> list = eduCourseOpeningService.selectEduCourseOpeningList(eduCourseOpening);
+        return getDataTable(list);
+    }
+
+    /**
+     * 教师修改自己的开课信息（只能改上课时间和地点）
+     */
+    @PreAuthorize("@ss.hasPermi('education:teacherCourse:edit')")
+    @Log(title = "教师修改课程", businessType = BusinessType.UPDATE)
+    @PutMapping("/updateMyCourse")
+    public AjaxResult updateMyCourse(@RequestBody EduCourseOpening eduCourseOpening)
+    {
+        // 获取当前登录用户
+        Long userId = SecurityUtils.getUserId();
+        EduTeacher teacher = eduTeacherService.selectEduTeacherByUserId(userId);
+        if (teacher == null)
+        {
+            return error("您不是教师，无法操作");
+        }
+        // 验证是否是自己的课程
+        EduCourseOpening existing = eduCourseOpeningService.selectEduCourseOpeningByOpenId(eduCourseOpening.getOpenId());
+        if (existing == null || !existing.getTeacherId().equals(teacher.getTeacherId()))
+        {
+            return error("无权修改此课程");
+        }
+        // 只允许修改上课时间和地点
+        EduCourseOpening updateObj = new EduCourseOpening();
+        updateObj.setOpenId(eduCourseOpening.getOpenId());
+        updateObj.setClassTime(eduCourseOpening.getClassTime());
+        updateObj.setClassLocation(eduCourseOpening.getClassLocation());
+        return toAjax(eduCourseOpeningService.updateEduCourseOpening(updateObj));
+    }
+
+    /**
+     * 获取教师待打分的课程列表（已结课但有学生未打分的课程）
+     */
+    @PreAuthorize("@ss.hasPermi('education:teacherCourse:list')")
+    @GetMapping("/pendingScore")
+    public AjaxResult getPendingScoreCourses()
+    {
+        Long userId = SecurityUtils.getUserId();
+        EduTeacher teacher = eduTeacherService.selectEduTeacherByUserId(userId);
+        if (teacher == null)
+        {
+            return success(java.util.Collections.emptyList());
+        }
+        List<EduCourseOpening> list = eduCourseOpeningService.selectPendingScoreCourses(teacher.getTeacherId());
+        return success(list);
+    }
+}

@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.education.mapper.EduStudentCourseMapper">
+    
+    <resultMap type="com.ruoyi.education.domain.EduStudentCourse" id="EduStudentCourseResult">
+        <result property="scId"          column="sc_id"          />
+        <result property="studentId"     column="student_id"     />
+        <result property="studentNo"     column="student_no"     />
+        <result property="studentName"   column="student_name"   />
+        <result property="openId"        column="open_id"        />
+        <result property="courseName"    column="course_name"    />
+        <result property="courseCode"    column="course_code"    />
+        <result property="credit"        column="credit"         />
+        <result property="teacherName"   column="teacher_name"   />
+        <result property="termName"      column="term_name"      />
+        <result property="termId"        column="term_id"        />
+        <result property="score"         column="score"          />
+        <result property="usualScore"    column="usual_score"    />
+        <result property="examScore"     column="exam_score"     />
+        <result property="enrollTime"    column="enroll_time"    />
+        <result property="status"        column="status"         />
+        <result property="isEvaluated"   column="is_evaluated"   />
+        <result property="courseStatus"  column="course_status"  />
+        <result property="classTime"     column="class_time"     />
+        <result property="classLocation" column="class_location" />
+        <result property="createBy"      column="create_by"      />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"      column="update_by"      />
+        <result property="updateTime"    column="update_time"    />
+        <result property="remark"        column="remark"         />
+    </resultMap>
+
+    <sql id="selectEduStudentCourseVo">
+        select sc.sc_id, sc.student_id, sc.open_id, sc.score, sc.usual_score, sc.exam_score, sc.enroll_time, sc.status,
+               sc.is_evaluated, sc.create_by, sc.create_time, sc.update_by, sc.update_time, sc.remark,
+               su.student_id as student_no, su.nick_name as student_name,
+               c.course_code, c.course_name, c.credit,
+               t.term_id, t.term_name,
+               o.status as course_status, o.class_time, o.class_location,
+               tu.nick_name as teacher_name
+        from edu_student_course sc
+        left join edu_student s on sc.student_id = s.student_id
+        left join sys_user su on s.user_id = su.user_id
+        left join edu_course_opening o on sc.open_id = o.open_id
+        left join edu_course c on o.course_id = c.course_id
+        left join edu_term t on o.term_id = t.term_id
+        left join edu_teacher et on o.teacher_id = et.teacher_id
+        left join sys_user tu on et.user_id = tu.user_id
+    </sql>
+
+    <select id="selectEduStudentCourseList" parameterType="com.ruoyi.education.domain.EduStudentCourse" resultMap="EduStudentCourseResult">
+        <include refid="selectEduStudentCourseVo"/>
+        <where>  
+            <if test="studentId != null"> and sc.student_id = #{studentId}</if>
+            <if test="studentNo != null and studentNo != ''"> and su.student_id like concat('%', #{studentNo}, '%')</if>
+            <if test="studentName != null and studentName != ''"> and su.nick_name like concat('%', #{studentName}, '%')</if>
+            <if test="openId != null"> and sc.open_id = #{openId}</if>
+            <if test="termId != null"> and o.term_id = #{termId}</if>
+            <if test="courseName != null and courseName != ''"> and c.course_name like concat('%', #{courseName}, '%')</if>
+            <if test="status != null and status != ''"> and sc.status = #{status}</if>
+            and sc.status = '0'
+        </where>
+        order by sc.sc_id desc
+    </select>
+
+    <select id="selectMyCourselist" parameterType="Long" resultMap="EduStudentCourseResult">
+        <include refid="selectEduStudentCourseVo"/>
+        where sc.student_id = #{studentId} and sc.status = '0'
+        order by sc.enroll_time desc
+    </select>
+
+    <select id="selectStudentsByOpenId" parameterType="Long" resultMap="EduStudentCourseResult">
+        <include refid="selectEduStudentCourseVo"/>
+        where sc.open_id = #{openId}
+        order by su.student_id
+    </select>
+    
+    <select id="selectEduStudentCourseByScId" parameterType="Long" resultMap="EduStudentCourseResult">
+        <include refid="selectEduStudentCourseVo"/>
+        where sc.sc_id = #{scId}
+    </select>
+
+    <select id="checkSelected" resultMap="EduStudentCourseResult">
+        <include refid="selectEduStudentCourseVo"/>
+        where sc.student_id = #{studentId} and sc.open_id = #{openId} and sc.status = '0'
+    </select>
+
+    <select id="selectMyScoreList" resultMap="EduStudentCourseResult">
+        <include refid="selectEduStudentCourseVo"/>
+        where sc.student_id = #{studentId}
+          and sc.score is not null
+        <if test="termId != null">
+          and o.term_id = #{termId}
+        </if>
+        <if test="scoreType != null and scoreType == 'pass'">
+          and sc.score &gt;= 60
+        </if>
+        <if test="scoreType != null and scoreType == 'fail'">
+          and sc.score &lt; 60
+        </if>
+        order by o.term_id desc, sc.sc_id desc
+    </select>
+        
+    <insert id="insertEduStudentCourse" parameterType="com.ruoyi.education.domain.EduStudentCourse" useGeneratedKeys="true" keyProperty="scId">
+        insert into edu_student_course
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="studentId != null">student_id,</if>
+            <if test="openId != null">open_id,</if>
+            <if test="score != null">score,</if>
+            <if test="usualScore != null">usual_score,</if>
+            <if test="examScore != null">exam_score,</if>
+            enroll_time,
+            <if test="status != null">status,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="remark != null">remark,</if>
+            create_time
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="studentId != null">#{studentId},</if>
+            <if test="openId != null">#{openId},</if>
+            <if test="score != null">#{score},</if>
+            <if test="usualScore != null">#{usualScore},</if>
+            <if test="examScore != null">#{examScore},</if>
+            sysdate(),
+            <if test="status != null">#{status},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="remark != null">#{remark},</if>
+            sysdate()
+        </trim>
+    </insert>
+
+    <update id="updateEduStudentCourse" parameterType="com.ruoyi.education.domain.EduStudentCourse">
+        update edu_student_course
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="score != null">score = #{score},</if>
+            <if test="usualScore != null">usual_score = #{usualScore},</if>
+            <if test="examScore != null">exam_score = #{examScore},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="isEvaluated != null">is_evaluated = #{isEvaluated},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            update_time = sysdate()
+        </trim>
+        where sc_id = #{scId}
+    </update>
+
+    <update id="withdrawCourse">
+        update edu_student_course set status = '1', update_time = sysdate() 
+        where student_id = #{studentId} and open_id = #{openId} and status = '0'
+    </update>
+
+    <delete id="deleteEduStudentCourseByScId" parameterType="Long">
+        delete from edu_student_course where sc_id = #{scId}
+    </delete>
+
+    <delete id="deleteEduStudentCourseByScIds" parameterType="String">
+        delete from edu_student_course where sc_id in 
+        <foreach item="scId" collection="array" open="(" separator="," close=")">
+            #{scId}
+        </foreach>
+    </delete>
+
+    <!-- 查询待评价的课程列表（已结课但未评价） -->
+    <select id="selectPendingEvaluations" parameterType="Long" resultType="com.ruoyi.education.domain.EduCourseEvaluation">
+        select sc.sc_id as scId, sc.open_id as openId, sc.student_id as studentId,
+               c.course_name as courseName, tu.nick_name as teacherName, t.term_name as termName,
+               sc.score as overallScore
+        from edu_student_course sc
+        left join edu_course_opening o on sc.open_id = o.open_id
+        left join edu_course c on o.course_id = c.course_id
+        left join edu_term t on o.term_id = t.term_id
+        left join sys_user tu on o.teacher_id = tu.user_id
+        where sc.student_id = #{studentId}
+          and sc.status = '0'
+          and o.status = '1'
+          and (sc.is_evaluated is null or sc.is_evaluated = '0')
+        order by t.term_id desc
+    </select>
+
+    <!-- 计算GPA统计 -->
+    <select id="selectGpaStats" resultType="java.util.Map">
+        select 
+            COUNT(*) as courseCount,
+            SUM(CAST(c.credit AS DECIMAL(5,2))) as totalCredit,
+            SUM(CAST(c.credit AS DECIMAL(5,2)) * 
+                CASE 
+                    WHEN sc.score >= 90 THEN 4.0
+                    WHEN sc.score >= 85 THEN 3.7
+                    WHEN sc.score >= 82 THEN 3.3
+                    WHEN sc.score >= 78 THEN 3.0
+                    WHEN sc.score >= 75 THEN 2.7
+                    WHEN sc.score >= 72 THEN 2.3
+                    WHEN sc.score >= 68 THEN 2.0
+                    WHEN sc.score >= 64 THEN 1.5
+                    WHEN sc.score >= 60 THEN 1.0
+                    ELSE 0
+                END) as weightedGpa,
+            SUM(CASE WHEN sc.score >= 60 THEN 1 ELSE 0 END) as passCount,
+            SUM(CASE WHEN sc.score &lt; 60 THEN 1 ELSE 0 END) as failCount
+        from edu_student_course sc
+        left join edu_course_opening o on sc.open_id = o.open_id
+        left join edu_course c on o.course_id = c.course_id
+        where sc.student_id = #{studentId}
+          and sc.score is not null
+        <if test="termId != null">
+          and o.term_id = #{termId}
+        </if>
+    </select>
+
+    <!-- 查询各学期的GPA列表 -->
+    <select id="selectTermGpaList" parameterType="Long" resultType="java.util.Map">
+        select 
+            t.term_id as termId,
+            t.term_name as termName,
+            COUNT(*) as courseCount,
+            SUM(CAST(c.credit AS DECIMAL(5,2))) as totalCredit,
+            ROUND(SUM(CAST(c.credit AS DECIMAL(5,2)) * 
+                CASE 
+                    WHEN sc.score >= 90 THEN 4.0
+                    WHEN sc.score >= 85 THEN 3.7
+                    WHEN sc.score >= 82 THEN 3.3
+                    WHEN sc.score >= 78 THEN 3.0
+                    WHEN sc.score >= 75 THEN 2.7
+                    WHEN sc.score >= 72 THEN 2.3
+                    WHEN sc.score >= 68 THEN 2.0
+                    WHEN sc.score >= 64 THEN 1.5
+                    WHEN sc.score >= 60 THEN 1.0
+                    ELSE 0
+                END) / SUM(CAST(c.credit AS DECIMAL(5,2))), 2) as gpa,
+            SUM(CASE WHEN sc.score >= 60 THEN 1 ELSE 0 END) as passCount,
+            SUM(CASE WHEN sc.score &lt; 60 THEN 1 ELSE 0 END) as failCount
+        from edu_student_course sc
+        left join edu_course_opening o on sc.open_id = o.open_id
+        left join edu_course c on o.course_id = c.course_id
+        left join edu_term t on o.term_id = t.term_id
+        where sc.student_id = #{studentId}
+          and sc.score is not null
+        group by t.term_id, t.term_name
+        order by t.term_id desc
+    </select>
+</mapper>

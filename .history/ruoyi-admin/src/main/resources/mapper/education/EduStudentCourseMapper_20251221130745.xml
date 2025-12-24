@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.education.mapper.EduStudentCourseMapper">
+    
+    <resultMap type="com.ruoyi.education.domain.EduStudentCourse" id="EduStudentCourseResult">
+        <result property="scId"          column="sc_id"          />
+        <result property="studentId"     column="student_id"     />
+        <result property="studentNo"     column="student_no"     />
+        <result property="studentName"   column="student_name"   />
+        <result property="openId"        column="open_id"        />
+        <result property="courseName"    column="course_name"    />
+        <result property="courseCode"    column="course_code"    />
+        <result property="credit"        column="credit"         />
+        <result property="teacherName"   column="teacher_name"   />
+        <result property="termName"      column="term_name"      />
+        <result property="score"         column="score"          />
+        <result property="usualScore"    column="usual_score"    />
+        <result property="examScore"     column="exam_score"     />
+        <result property="enrollTime"    column="enroll_time"    />
+        <result property="status"        column="status"         />
+        <result property="createBy"      column="create_by"      />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"      column="update_by"      />
+        <result property="updateTime"    column="update_time"    />
+        <result property="remark"        column="remark"         />
+    </resultMap>
+
+    <sql id="selectEduStudentCourseVo">
+        select sc.sc_id, sc.student_id, sc.open_id, sc.score, sc.usual_score, sc.exam_score, sc.enroll_time, sc.status,
+               sc.create_by, sc.create_time, sc.update_by, sc.update_time, sc.remark,
+               su.student_id as student_no, su.nick_name as student_name,
+               c.course_code, c.course_name, c.credit,
+               t.term_name,
+               tu.nick_name as teacher_name
+        from edu_student_course sc
+        left join edu_student s on sc.student_id = s.student_id
+        left join sys_user su on s.user_id = su.user_id
+        left join edu_course_opening o on sc.open_id = o.open_id
+        left join edu_course c on o.course_id = c.course_id
+        left join edu_term t on o.term_id = t.term_id
+        left join edu_teacher et on o.teacher_id = et.teacher_id
+        left join sys_user tu on et.user_id = tu.user_id
+    </sql>
+
+    <select id="selectEduStudentCourseList" parameterType="com.ruoyi.education.domain.EduStudentCourse" resultMap="EduStudentCourseResult">
+        <include refid="selectEduStudentCourseVo"/>
+        <where>  
+            <if test="studentId != null"> and sc.student_id = #{studentId}</if>
+            <if test="studentNo != null and studentNo != ''"> and su.student_id like concat('%', #{studentNo}, '%')</if>
+            <if test="studentName != null and studentName != ''"> and su.nick_name like concat('%', #{studentName}, '%')</if>
+            <if test="openId != null"> and sc.open_id = #{openId}</if>
+            <if test="courseName != null and courseName != ''"> and c.course_name like concat('%', #{courseName}, '%')</if>
+            <if test="status != null and status != ''"> and sc.status = #{status}</if>
+        </where>
+        order by sc.sc_id desc
+    </select>
+
+    <select id="selectMyCourselist" parameterType="Long" resultMap="EduStudentCourseResult">
+        <include refid="selectEduStudentCourseVo"/>
+        where sc.student_id = #{studentId} and sc.status = '0'
+        order by sc.enroll_time desc
+    </select>
+
+    <select id="selectStudentsByOpenId" parameterType="Long" resultMap="EduStudentCourseResult">
+        <include refid="selectEduStudentCourseVo"/>
+        where sc.open_id = #{openId}
+        order by su.student_id
+    </select>
+    
+    <select id="selectEduStudentCourseByScId" parameterType="Long" resultMap="EduStudentCourseResult">
+        <include refid="selectEduStudentCourseVo"/>
+        where sc.sc_id = #{scId}
+    </select>
+
+    <select id="checkSelected" resultMap="EduStudentCourseResult">
+        <include refid="selectEduStudentCourseVo"/>
+        where sc.student_id = #{studentId} and sc.open_id = #{openId} and sc.status = '0'
+    </select>
+        
+    <insert id="insertEduStudentCourse" parameterType="com.ruoyi.education.domain.EduStudentCourse" useGeneratedKeys="true" keyProperty="scId">
+        insert into edu_student_course
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="studentId != null">student_id,</if>
+            <if test="openId != null">open_id,</if>
+            <if test="score != null">score,</if>
+            <if test="usualScore != null">usual_score,</if>
+            <if test="examScore != null">exam_score,</if>
+            enroll_time,
+            <if test="status != null">status,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="remark != null">remark,</if>
+            create_time
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="studentId != null">#{studentId},</if>
+            <if test="openId != null">#{openId},</if>
+            <if test="score != null">#{score},</if>
+            <if test="usualScore != null">#{usualScore},</if>
+            <if test="examScore != null">#{examScore},</if>
+            sysdate(),
+            <if test="status != null">#{status},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="remark != null">#{remark},</if>
+            sysdate()
+        </trim>
+    </insert>
+
+    <update id="updateEduStudentCourse" parameterType="com.ruoyi.education.domain.EduStudentCourse">
+        update edu_student_course
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="score != null">score = #{score},</if>
+            <if test="usualScore != null">usual_score = #{usualScore},</if>
+            <if test="examScore != null">exam_score = #{examScore},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            update_time = sysdate()
+        </trim>
+        where sc_id = #{scId}
+    </update>
+
+    <update id="withdrawCourse">
+        update edu_student_course set status = '1', update_time = sysdate() 
+        where student_id = #{studentId} and open_id = #{openId} and status = '0'
+    </update>
+
+    <delete id="deleteEduStudentCourseByScId" parameterType="Long">
+        delete from edu_student_course where sc_id = #{scId}
+    </delete>
+
+    <delete id="deleteEduStudentCourseByScIds" parameterType="String">
+        delete from edu_student_course where sc_id in 
+        <foreach item="scId" collection="array" open="(" separator="," close=")">
+            #{scId}
+        </foreach>
+    </delete>
+</mapper>

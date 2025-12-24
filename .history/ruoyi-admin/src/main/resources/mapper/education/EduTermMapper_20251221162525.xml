@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.education.mapper.EduTermMapper">
+    
+    <resultMap type="com.ruoyi.education.domain.EduTerm" id="EduTermResult">
+        <result property="termId"         column="term_id"         />
+        <result property="termName"       column="term_name"       />
+        <result property="startDate"      column="start_date"      />
+        <result property="endDate"        column="end_date"        />
+        <result property="selectionStart" column="selection_start" />
+        <result property="selectionEnd"   column="selection_end"   />
+        <result property="isCurrent"      column="is_current"      />
+        <result property="status"         column="status"          />
+        <result property="createBy"     column="create_by"     />
+        <result property="createTime"   column="create_time"   />
+        <result property="updateBy"     column="update_by"     />
+        <result property="updateTime"   column="update_time"   />
+        <result property="remark"       column="remark"        />
+    </resultMap>
+
+    <sql id="selectEduTermVo">
+        select term_id, term_name, start_date, end_date, selection_start, selection_end, is_current, status, create_by, create_time, update_by, update_time, remark from edu_term
+    </sql>
+
+    <select id="selectEduTermList" parameterType="com.ruoyi.education.domain.EduTerm" resultMap="EduTermResult">
+        <include refid="selectEduTermVo"/>
+        <where>  
+            <if test="termName != null  and termName != ''"> and term_name like concat('%', #{termName}, '%')</if>
+            <if test="isCurrent != null  and isCurrent != ''"> and is_current = #{isCurrent}</if>
+            <if test="status != null  and status != ''"> and status = #{status}</if>
+        </where>
+        order by term_id desc
+    </select>
+    
+    <select id="selectEduTermByTermId" parameterType="Long" resultMap="EduTermResult">
+        <include refid="selectEduTermVo"/>
+        where term_id = #{termId}
+    </select>
+
+    <select id="selectCurrentTerm" resultMap="EduTermResult">
+        <include refid="selectEduTermVo"/>
+        where is_current = '1' and status = '0' limit 1
+    </select>
+        
+    <insert id="insertEduTerm" parameterType="com.ruoyi.education.domain.EduTerm" useGeneratedKeys="true" keyProperty="termId">
+        insert into edu_term
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="termName != null and termName != ''">term_name,</if>
+            <if test="startDate != null">start_date,</if>
+            <if test="endDate != null">end_date,</if>
+            <if test="selectionStart != null">selection_start,</if>
+            <if test="selectionEnd != null">selection_end,</if>
+            <if test="isCurrent != null">is_current,</if>
+            <if test="status != null">status,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="remark != null">remark,</if>
+            create_time
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="termName != null and termName != ''">#{termName},</if>
+            <if test="startDate != null">#{startDate},</if>
+            <if test="endDate != null">#{endDate},</if>
+            <if test="selectionStart != null">#{selectionStart},</if>
+            <if test="selectionEnd != null">#{selectionEnd},</if>
+            <if test="isCurrent != null">#{isCurrent},</if>
+            <if test="status != null">#{status},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="remark != null">#{remark},</if>
+            sysdate()
+        </trim>
+    </insert>
+
+    <update id="updateEduTerm" parameterType="com.ruoyi.education.domain.EduTerm">
+        update edu_term
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="termName != null and termName != ''">term_name = #{termName},</if>
+            <if test="startDate != null">start_date = #{startDate},</if>
+            <if test="endDate != null">end_date = #{endDate},</if>
+            <if test="selectionStart != null">selection_start = #{selectionStart},</if>
+            <if test="selectionEnd != null">selection_end = #{selectionEnd},</if>
+            <if test="isCurrent != null">is_current = #{isCurrent},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            update_time = sysdate()
+        </trim>
+        where term_id = #{termId}
+    </update>
+
+    <update id="resetCurrentTerm">
+        update edu_term set is_current = '0' where is_current = '1'
+    </update>
+
+    <delete id="deleteEduTermByTermId" parameterType="Long">
+        delete from edu_term where term_id = #{termId}
+    </delete>
+
+    <delete id="deleteEduTermByTermIds" parameterType="String">
+        delete from edu_term where term_id in 
+        <foreach item="termId" collection="array" open="(" separator="," close=")">
+            #{termId}
+        </foreach>
+    </delete>
+</mapper>

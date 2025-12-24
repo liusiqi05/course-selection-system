@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.education.mapper.EduTeacherMapper">
+    
+    <resultMap type="com.ruoyi.education.domain.EduTeacher" id="EduTeacherResult">
+        <result property="teacherId"      column="teacher_id"      />
+        <result property="userId"         column="user_id"         />
+        <result property="title"          column="title"           />
+        <result property="education"      column="education"       />
+        <result property="researchArea"   column="research_area"   />
+        <result property="createBy"       column="create_by"       />
+        <result property="createTime"     column="create_time"     />
+        <result property="updateBy"       column="update_by"       />
+        <result property="updateTime"     column="update_time"     />
+        <result property="remark"         column="remark"          />
+        <!-- 关联 sys_user 字段 -->
+        <result property="teacherNo"      column="teacher_no"      />
+        <result property="nickName"       column="nick_name"       />
+        <result property="sex"            column="sex"             />
+        <result property="deptId"         column="dept_id"         />
+        <result property="deptName"       column="dept_name"       />
+        <result property="phonenumber"    column="phonenumber"     />
+        <result property="email"          column="email"           />
+        <result property="userStatus"     column="user_status"     />
+    </resultMap>
+
+    <sql id="selectEduTeacherVo">
+        select t.teacher_id, t.user_id, t.title, t.education, t.research_area,
+               t.create_by, t.create_time, t.update_by, t.update_time, t.remark,
+               u.teacher_id as teacher_no, u.nick_name, u.sex, u.dept_id, u.phonenumber, u.email, 
+               u.status as user_status,
+               d.dept_name
+        from edu_teacher t
+        left join sys_user u on t.user_id = u.user_id
+        left join sys_dept d on u.dept_id = d.dept_id
+    </sql>
+
+    <select id="selectEduTeacherList" parameterType="com.ruoyi.education.domain.EduTeacher" resultMap="EduTeacherResult">
+        <include refid="selectEduTeacherVo"/>
+        <where>
+            u.del_flag = '0'
+            <if test="teacherNo != null and teacherNo != ''"> and u.teacher_id like concat('%', #{teacherNo}, '%')</if>
+            <if test="nickName != null and nickName != ''"> and u.nick_name like concat('%', #{nickName}, '%')</if>
+            <if test="deptId != null"> and u.dept_id = #{deptId}</if>
+            <if test="title != null and title != ''"> and t.title = #{title}</if>
+        </where>
+        order by t.teacher_id desc
+    </select>
+    
+    <select id="selectEduTeacherByTeacherId" parameterType="Long" resultMap="EduTeacherResult">
+        <include refid="selectEduTeacherVo"/>
+        where t.teacher_id = #{teacherId}
+    </select>
+
+    <select id="selectEduTeacherByUserId" parameterType="Long" resultMap="EduTeacherResult">
+        <include refid="selectEduTeacherVo"/>
+        where t.user_id = #{userId}
+    </select>
+
+    <select id="selectEduTeacherAll" resultMap="EduTeacherResult">
+        <include refid="selectEduTeacherVo"/>
+        where u.del_flag = '0' and u.status = '0'
+        order by t.teacher_id
+    </select>
+        
+    <insert id="insertEduTeacher" parameterType="com.ruoyi.education.domain.EduTeacher" useGeneratedKeys="true" keyProperty="teacherId">
+        insert into edu_teacher
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="userId != null">user_id,</if>
+            <if test="title != null">title,</if>
+            <if test="education != null">education,</if>
+            <if test="researchArea != null">research_area,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="remark != null">remark,</if>
+            create_time
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="userId != null">#{userId},</if>
+            <if test="title != null">#{title},</if>
+            <if test="education != null">#{education},</if>
+            <if test="researchArea != null">#{researchArea},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="remark != null">#{remark},</if>
+            sysdate()
+        </trim>
+    </insert>
+
+    <update id="updateEduTeacher" parameterType="com.ruoyi.education.domain.EduTeacher">
+        update edu_teacher
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="title != null">title = #{title},</if>
+            <if test="education != null">education = #{education},</if>
+            <if test="researchArea != null">research_area = #{researchArea},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            update_time = sysdate()
+        </trim>
+        where teacher_id = #{teacherId}
+    </update>
+
+    <delete id="deleteEduTeacherByTeacherId" parameterType="Long">
+        delete from edu_teacher where teacher_id = #{teacherId}
+    </delete>
+
+    <delete id="deleteEduTeacherByTeacherIds" parameterType="String">
+        delete from edu_teacher where teacher_id in 
+        <foreach item="teacherId" collection="array" open="(" separator="," close=")">
+            #{teacherId}
+        </foreach>
+    </delete>
+
+    <delete id="deleteEduTeacherByUserId" parameterType="Long">
+        delete from edu_teacher where user_id = #{userId}
+    </delete>
+</mapper>

@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.education.mapper.EduCourseOpeningMapper">
+    
+    <resultMap type="com.ruoyi.education.domain.EduCourseOpening" id="EduCourseOpeningResult">
+        <result property="openId"         column="open_id"         />
+        <result property="termId"         column="term_id"         />
+        <result property="termName"       column="term_name"       />
+        <result property="courseId"       column="course_id"       />
+        <result property="courseCode"     column="course_code"     />
+        <result property="courseName"     column="course_name"     />
+        <result property="credit"         column="credit"          />
+        <result property="teacherId"      column="teacher_id"      />
+        <result property="teacherName"    column="teacher_name"    />
+        <result property="classTime"      column="class_time"      />
+        <result property="classLocation"  column="class_location"  />
+        <result property="maxStudents"    column="max_students"    />
+        <result property="selectedNum"    column="selected_num"    />
+        <result property="status"         column="status"          />
+        <result property="createBy"       column="create_by"       />
+        <result property="createTime"     column="create_time"     />
+        <result property="updateBy"       column="update_by"       />
+        <result property="updateTime"     column="update_time"     />
+        <result property="remark"         column="remark"          />
+    </resultMap>
+
+    <sql id="selectEduCourseOpeningVo">
+        select o.open_id, o.term_id, o.course_id, o.teacher_id, o.class_time, o.class_location, 
+               o.max_students, o.selected_num, o.status, o.create_by, o.create_time, 
+               o.update_by, o.update_time, o.remark,
+               t.term_name,
+               c.course_code, c.course_name, c.credit,
+               u.nick_name as teacher_name
+        from edu_course_opening o
+        left join edu_term t on o.term_id = t.term_id
+        left join edu_course c on o.course_id = c.course_id
+        left join edu_teacher et on o.teacher_id = et.teacher_id
+        left join sys_user u on et.user_id = u.user_id
+    </sql>
+
+    <select id="selectEduCourseOpeningList" parameterType="com.ruoyi.education.domain.EduCourseOpening" resultMap="EduCourseOpeningResult">
+        <include refid="selectEduCourseOpeningVo"/>
+        <where>  
+            <if test="termId != null"> and o.term_id = #{termId}</if>
+            <if test="courseId != null"> and o.course_id = #{courseId}</if>
+            <if test="courseName != null and courseName != ''"> and c.course_name like concat('%', #{courseName}, '%')</if>
+            <if test="teacherId != null"> and o.teacher_id = #{teacherId}</if>
+            <if test="teacherName != null and teacherName != ''"> and u.nick_name like concat('%', #{teacherName}, '%')</if>
+            <if test="status != null and status != ''"> and o.status = #{status}</if>
+        </where>
+        order by o.open_id desc
+    </select>
+
+    <select id="selectAvailableCourseList" parameterType="com.ruoyi.education.domain.EduCourseOpening" resultMap="EduCourseOpeningResult">
+        <include refid="selectEduCourseOpeningVo"/>
+        <where>
+            o.status = '0'
+            and o.selected_num &lt; o.max_students
+            <if test="termId != null"> and o.term_id = #{termId}</if>
+            <if test="courseName != null and courseName != ''"> and c.course_name like concat('%', #{courseName}, '%')</if>
+            <if test="teacherName != null and teacherName != ''"> and u.nick_name like concat('%', #{teacherName}, '%')</if>
+        </where>
+        order by o.open_id desc
+    </select>
+    
+    <select id="selectEduCourseOpeningByOpenId" parameterType="Long" resultMap="EduCourseOpeningResult">
+        <include refid="selectEduCourseOpeningVo"/>
+        where o.open_id = #{openId}
+    </select>
+        
+    <insert id="insertEduCourseOpening" parameterType="com.ruoyi.education.domain.EduCourseOpening" useGeneratedKeys="true" keyProperty="openId">
+        insert into edu_course_opening
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="termId != null">term_id,</if>
+            <if test="courseId != null">course_id,</if>
+            <if test="teacherId != null">teacher_id,</if>
+            <if test="classTime != null">class_time,</if>
+            <if test="classLocation != null">class_location,</if>
+            <if test="maxStudents != null">max_students,</if>
+            <if test="selectedNum != null">selected_num,</if>
+            <if test="status != null">status,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="remark != null">remark,</if>
+            create_time
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="termId != null">#{termId},</if>
+            <if test="courseId != null">#{courseId},</if>
+            <if test="teacherId != null">#{teacherId},</if>
+            <if test="classTime != null">#{classTime},</if>
+            <if test="classLocation != null">#{classLocation},</if>
+            <if test="maxStudents != null">#{maxStudents},</if>
+            <if test="selectedNum != null">#{selectedNum},</if>
+            <if test="status != null">#{status},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="remark != null">#{remark},</if>
+            sysdate()
+        </trim>
+    </insert>
+
+    <update id="updateEduCourseOpening" parameterType="com.ruoyi.education.domain.EduCourseOpening">
+        update edu_course_opening
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="termId != null">term_id = #{termId},</if>
+            <if test="courseId != null">course_id = #{courseId},</if>
+            <if test="teacherId != null">teacher_id = #{teacherId},</if>
+            <if test="classTime != null">class_time = #{classTime},</if>
+            <if test="classLocation != null">class_location = #{classLocation},</if>
+            <if test="maxStudents != null">max_students = #{maxStudents},</if>
+            <if test="selectedNum != null">selected_num = #{selectedNum},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            update_time = sysdate()
+        </trim>
+        where open_id = #{openId}
+    </update>
+
+    <update id="incrementSelectedNum" parameterType="Long">
+        update edu_course_opening set selected_num = selected_num + 1 where open_id = #{openId}
+    </update>
+
+    <update id="decrementSelectedNum" parameterType="Long">
+        update edu_course_opening set selected_num = selected_num - 1 where open_id = #{openId} and selected_num > 0
+    </update>
+
+    <delete id="deleteEduCourseOpeningByOpenId" parameterType="Long">
+        delete from edu_course_opening where open_id = #{openId}
+    </delete>
+
+    <delete id="deleteEduCourseOpeningByOpenIds" parameterType="String">
+        delete from edu_course_opening where open_id in 
+        <foreach item="openId" collection="array" open="(" separator="," close=")">
+            #{openId}
+        </foreach>
+    </delete>
+</mapper>

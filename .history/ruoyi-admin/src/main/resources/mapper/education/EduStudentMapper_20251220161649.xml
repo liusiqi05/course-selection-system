@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.education.mapper.EduStudentMapper">
+    
+    <resultMap type="com.ruoyi.education.domain.EduStudent" id="EduStudentResult">
+        <result property="studentId"          column="student_id"          />
+        <result property="userId"             column="user_id"             />
+        <result property="className"          column="class_name"          />
+        <result property="enrollmentDate"     column="enrollment_date"     />
+        <result property="expectedGraduation" column="expected_graduation" />
+        <result property="studentStatus"      column="student_status"      />
+        <result property="createBy"           column="create_by"           />
+        <result property="createTime"         column="create_time"         />
+        <result property="updateBy"           column="update_by"           />
+        <result property="updateTime"         column="update_time"         />
+        <result property="remark"             column="remark"              />
+        <!-- 关联 sys_user 字段 -->
+        <result property="studentNo"          column="student_no"          />
+        <result property="nickName"           column="nick_name"           />
+        <result property="sex"                column="sex"                 />
+        <result property="deptId"             column="dept_id"             />
+        <result property="deptName"           column="dept_name"           />
+        <result property="major"              column="major"               />
+        <result property="grade"              column="grade"               />
+        <result property="phonenumber"        column="phonenumber"         />
+        <result property="email"              column="email"               />
+        <result property="userStatus"         column="user_status"         />
+    </resultMap>
+
+    <sql id="selectEduStudentVo">
+        select s.student_id, s.user_id, s.class_name, s.enrollment_date, s.expected_graduation, 
+               s.student_status, s.create_by, s.create_time, s.update_by, s.update_time, s.remark,
+               u.student_id as student_no, u.nick_name, u.sex, u.dept_id, u.major, u.grade, 
+               u.phonenumber, u.email, u.status as user_status,
+               d.dept_name
+        from edu_student s
+        left join sys_user u on s.user_id = u.user_id
+        left join sys_dept d on u.dept_id = d.dept_id
+    </sql>
+
+    <select id="selectEduStudentList" parameterType="com.ruoyi.education.domain.EduStudent" resultMap="EduStudentResult">
+        <include refid="selectEduStudentVo"/>
+        <where>
+            u.del_flag = '0'
+            <if test="studentNo != null and studentNo != ''"> and u.student_id like concat('%', #{studentNo}, '%')</if>
+            <if test="nickName != null and nickName != ''"> and u.nick_name like concat('%', #{nickName}, '%')</if>
+            <if test="className != null and className != ''"> and s.class_name like concat('%', #{className}, '%')</if>
+            <if test="deptId != null"> and u.dept_id = #{deptId}</if>
+            <if test="major != null and major != ''"> and u.major like concat('%', #{major}, '%')</if>
+            <if test="grade != null and grade != ''"> and u.grade = #{grade}</if>
+            <if test="studentStatus != null and studentStatus != ''"> and s.student_status = #{studentStatus}</if>
+        </where>
+        order by s.student_id desc
+    </select>
+    
+    <select id="selectEduStudentByStudentId" parameterType="Long" resultMap="EduStudentResult">
+        <include refid="selectEduStudentVo"/>
+        where s.student_id = #{studentId}
+    </select>
+
+    <select id="selectEduStudentByUserId" parameterType="Long" resultMap="EduStudentResult">
+        <include refid="selectEduStudentVo"/>
+        where s.user_id = #{userId}
+    </select>
+        
+    <insert id="insertEduStudent" parameterType="com.ruoyi.education.domain.EduStudent" useGeneratedKeys="true" keyProperty="studentId">
+        insert into edu_student
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="userId != null">user_id,</if>
+            <if test="className != null">class_name,</if>
+            <if test="enrollmentDate != null">enrollment_date,</if>
+            <if test="expectedGraduation != null">expected_graduation,</if>
+            <if test="studentStatus != null">student_status,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="remark != null">remark,</if>
+            create_time
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="userId != null">#{userId},</if>
+            <if test="className != null">#{className},</if>
+            <if test="enrollmentDate != null">#{enrollmentDate},</if>
+            <if test="expectedGraduation != null">#{expectedGraduation},</if>
+            <if test="studentStatus != null">#{studentStatus},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="remark != null">#{remark},</if>
+            sysdate()
+        </trim>
+    </insert>
+
+    <update id="updateEduStudent" parameterType="com.ruoyi.education.domain.EduStudent">
+        update edu_student
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="className != null">class_name = #{className},</if>
+            <if test="enrollmentDate != null">enrollment_date = #{enrollmentDate},</if>
+            <if test="expectedGraduation != null">expected_graduation = #{expectedGraduation},</if>
+            <if test="studentStatus != null">student_status = #{studentStatus},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            update_time = sysdate()
+        </trim>
+        where student_id = #{studentId}
+    </update>
+
+    <delete id="deleteEduStudentByStudentId" parameterType="Long">
+        delete from edu_student where student_id = #{studentId}
+    </delete>
+
+    <delete id="deleteEduStudentByStudentIds" parameterType="String">
+        delete from edu_student where student_id in 
+        <foreach item="studentId" collection="array" open="(" separator="," close=")">
+            #{studentId}
+        </foreach>
+    </delete>
+
+    <delete id="deleteEduStudentByUserId" parameterType="Long">
+        delete from edu_student where user_id = #{userId}
+    </delete>
+</mapper>

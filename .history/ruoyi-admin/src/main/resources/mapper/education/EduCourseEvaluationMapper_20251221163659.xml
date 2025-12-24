@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.education.mapper.EduCourseEvaluationMapper">
+    
+    <resultMap type="EduCourseEvaluation" id="EduCourseEvaluationResult">
+        <result property="evalId"           column="eval_id"            />
+        <result property="scId"             column="sc_id"              />
+        <result property="studentId"        column="student_id"         />
+        <result property="openId"           column="open_id"            />
+        <result property="teachingScore"    column="teaching_score"     />
+        <result property="contentScore"     column="content_score"      />
+        <result property="difficultyScore"  column="difficulty_score"   />
+        <result property="workloadScore"    column="workload_score"     />
+        <result property="overallScore"     column="overall_score"      />
+        <result property="comment"          column="comment"            />
+        <result property="isAnonymous"      column="is_anonymous"       />
+        <result property="evalTime"         column="eval_time"          />
+        <result property="createTime"       column="create_time"        />
+        <result property="updateTime"       column="update_time"        />
+        <result property="studentName"      column="student_name"       />
+        <result property="studentNo"        column="student_no"         />
+        <result property="courseName"       column="course_name"        />
+        <result property="teacherName"      column="teacher_name"       />
+        <result property="termName"         column="term_name"          />
+        <result property="avgScore"         column="avg_score"          />
+    </resultMap>
+
+    <sql id="selectEduCourseEvaluationVo">
+        select e.eval_id, e.sc_id, e.student_id, e.open_id, e.teaching_score, e.content_score, 
+               e.difficulty_score, e.workload_score, e.overall_score, e.comment, e.is_anonymous, 
+               e.eval_time, e.create_time, e.update_time,
+               CASE WHEN e.is_anonymous = '1' THEN '匿名' ELSE s.student_name END as student_name,
+               s.student_no, c.course_name, t.nick_name as teacher_name, tm.term_name
+        from edu_course_evaluation e
+        left join edu_student s on e.student_id = s.student_id
+        left join edu_course_opening o on e.open_id = o.open_id
+        left join edu_course c on o.course_id = c.course_id
+        left join sys_user t on o.teacher_id = t.user_id
+        left join edu_term tm on o.term_id = tm.term_id
+    </sql>
+
+    <select id="selectEduCourseEvaluationByEvalId" parameterType="Long" resultMap="EduCourseEvaluationResult">
+        <include refid="selectEduCourseEvaluationVo"/>
+        where e.eval_id = #{evalId}
+    </select>
+
+    <select id="selectEduCourseEvaluationList" parameterType="EduCourseEvaluation" resultMap="EduCourseEvaluationResult">
+        <include refid="selectEduCourseEvaluationVo"/>
+        <where>  
+            <if test="studentId != null "> and e.student_id = #{studentId}</if>
+            <if test="openId != null "> and e.open_id = #{openId}</if>
+            <if test="overallScore != null "> and e.overall_score = #{overallScore}</if>
+        </where>
+        order by e.eval_time desc
+    </select>
+
+    <select id="selectEvaluationStats" parameterType="Long" resultMap="EduCourseEvaluationResult">
+        select o.open_id, c.course_name, t.nick_name as teacher_name, tm.term_name,
+               AVG(e.teaching_score) as teaching_score,
+               AVG(e.content_score) as content_score,
+               AVG(e.difficulty_score) as difficulty_score,
+               AVG(e.workload_score) as workload_score,
+               AVG(e.overall_score) as overall_score,
+               AVG((e.teaching_score + e.content_score + e.difficulty_score + e.workload_score + e.overall_score) / 5.0) as avg_score,
+               COUNT(e.eval_id) as eval_id
+        from edu_course_opening o
+        left join edu_course_evaluation e on o.open_id = e.open_id
+        left join edu_course c on o.course_id = c.course_id
+        left join sys_user t on o.teacher_id = t.user_id
+        left join edu_term tm on o.term_id = tm.term_id
+        where o.open_id = #{openId}
+        group by o.open_id, c.course_name, t.nick_name, tm.term_name
+    </select>
+
+    <select id="selectByStudentAndOpen" resultMap="EduCourseEvaluationResult">
+        <include refid="selectEduCourseEvaluationVo"/>
+        where e.student_id = #{studentId} and e.open_id = #{openId}
+    </select>
+
+    <insert id="insertEduCourseEvaluation" parameterType="EduCourseEvaluation" useGeneratedKeys="true" keyProperty="evalId">
+        insert into edu_course_evaluation
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="scId != null">sc_id,</if>
+            <if test="studentId != null">student_id,</if>
+            <if test="openId != null">open_id,</if>
+            <if test="teachingScore != null">teaching_score,</if>
+            <if test="contentScore != null">content_score,</if>
+            <if test="difficultyScore != null">difficulty_score,</if>
+            <if test="workloadScore != null">workload_score,</if>
+            <if test="overallScore != null">overall_score,</if>
+            <if test="comment != null">comment,</if>
+            <if test="isAnonymous != null">is_anonymous,</if>
+            <if test="evalTime != null">eval_time,</if>
+            <if test="createTime != null">create_time,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="scId != null">#{scId},</if>
+            <if test="studentId != null">#{studentId},</if>
+            <if test="openId != null">#{openId},</if>
+            <if test="teachingScore != null">#{teachingScore},</if>
+            <if test="contentScore != null">#{contentScore},</if>
+            <if test="difficultyScore != null">#{difficultyScore},</if>
+            <if test="workloadScore != null">#{workloadScore},</if>
+            <if test="overallScore != null">#{overallScore},</if>
+            <if test="comment != null">#{comment},</if>
+            <if test="isAnonymous != null">#{isAnonymous},</if>
+            <if test="evalTime != null">#{evalTime},</if>
+            <if test="createTime != null">#{createTime},</if>
+         </trim>
+    </insert>
+
+    <update id="updateEduCourseEvaluation" parameterType="EduCourseEvaluation">
+        update edu_course_evaluation
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="teachingScore != null">teaching_score = #{teachingScore},</if>
+            <if test="contentScore != null">content_score = #{contentScore},</if>
+            <if test="difficultyScore != null">difficulty_score = #{difficultyScore},</if>
+            <if test="workloadScore != null">workload_score = #{workloadScore},</if>
+            <if test="overallScore != null">overall_score = #{overallScore},</if>
+            <if test="comment != null">comment = #{comment},</if>
+            <if test="isAnonymous != null">is_anonymous = #{isAnonymous},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where eval_id = #{evalId}
+    </update>
+
+    <delete id="deleteEduCourseEvaluationByEvalId" parameterType="Long">
+        delete from edu_course_evaluation where eval_id = #{evalId}
+    </delete>
+
+    <delete id="deleteEduCourseEvaluationByEvalIds" parameterType="String">
+        delete from edu_course_evaluation where eval_id in 
+        <foreach item="evalId" collection="array" open="(" separator="," close=")">
+            #{evalId}
+        </foreach>
+    </delete>
+</mapper>
