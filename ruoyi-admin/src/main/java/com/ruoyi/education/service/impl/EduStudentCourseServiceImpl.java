@@ -212,6 +212,10 @@ public class EduStudentCourseServiceImpl implements IEduStudentCourseService
             if (e.getMessage() != null && e.getMessage().contains("uk_student_open")) {
                 return AjaxResult.error("选课失败：您已选择该课程，请勿重复选择");
             }
+            // 检查是否是触发器抛出的时间冲突异常
+            if (e.getMessage() != null && e.getMessage().contains("选课时间冲突，无法选课")) {
+                return AjaxResult.error("选课失败：与其他课程时间冲突");
+            }
             return AjaxResult.error("选课失败，请稍后重试");
         }
     }

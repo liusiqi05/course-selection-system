@@ -116,10 +116,17 @@ public class EduCourseApplyServiceImpl implements IEduCourseApplyService
      * @return 结果
      */
     @Override
+    @Transactional
     public int approveEduCourseApply(Long applyId, String status, String rejectReason)
     {
         String approveBy = SecurityUtils.getUsername();
-        return eduCourseApplyMapper.approveEduCourseApply(applyId, status, rejectReason, approveBy);
+        int rows = eduCourseApplyMapper.approveEduCourseApply(applyId, status, rejectReason, approveBy);
+        
+        if (rows > 0 && "1".equals(status)) {
+            EduCourseApply apply = eduCourseApplyMapper.selectEduCourseApplyByApplyId(applyId);
+            createOpeningFromApply(apply);
+        }
+        return rows;
     }
 
     /**
@@ -130,10 +137,21 @@ public class EduCourseApplyServiceImpl implements IEduCourseApplyService
      * @return 结果
      */
     @Override
+    @Transactional
     public int batchApproveEduCourseApply(Long[] applyIds, String status)
     {
         String approveBy = SecurityUtils.getUsername();
-        return eduCourseApplyMapper.batchApproveEduCourseApply(applyIds, status, approveBy);
+        int rows = eduCourseApplyMapper.batchApproveEduCourseApply(applyIds, status, approveBy);
+        
+        if (rows > 0 && "1".equals(status)) {
+            for (Long applyId : applyIds) {
+                EduCourseApply apply = eduCourseApplyMapper.selectEduCourseApplyByApplyId(applyId);
+                if (apply != null) {
+                    createOpeningFromApply(apply);
+                }
+            }
+        }
+        return rows;
     }
 
     /**
@@ -175,50 +193,83 @@ public class EduCourseApplyServiceImpl implements IEduCourseApplyService
         
         for (EduCourseApply apply : approvedList)
         {
-            // 如果申请中没有课程ID，需要先创建课程
-            Long courseId = apply.getCourseId();
-            if (courseId == null && apply.getCourseCode() != null)
-            {
-                // 检查课程代码是否已存在
-                EduCourse existCourse = eduCourseMapper.checkCourseCodeUnique(apply.getCourseCode());
-                if (existCourse != null)
-                {
-                    courseId = existCourse.getCourseId();
-                }
-                else
-                {
-                    // 创建新课程
-                    EduCourse newCourse = new EduCourse();
-                    newCourse.setCourseCode(apply.getCourseCode());
-                    newCourse.setCourseName(apply.getCourseName());
-                    newCourse.setCredit(apply.getCredit());
-                    newCourse.setCourseType(apply.getCourseType());
-                    newCourse.setDescription(apply.getDescription());
-                    newCourse.setStatus("0"); // 正常状态
-                    newCourse.setCreateBy(SecurityUtils.getUsername());
-                    newCourse.setCreateTime(DateUtils.getNowDate());
-                    eduCourseMapper.insertEduCourse(newCourse);
-                    courseId = newCourse.getCourseId();
-                }
+            if (createOpeningFromApply(apply)) {
+                count++;
             }
-            
-            // 创建开课安排
-            EduCourseOpening opening = new EduCourseOpening();
-            opening.setTermId(apply.getTermId());
-            opening.setCourseId(courseId);
-            opening.setTeacherId(apply.getTeacherId());
-            opening.setClassTime(apply.getClassTime());
-            opening.setClassLocation(apply.getClassLocation());
-            opening.setMaxStudents(apply.getMaxStudents());
-            opening.setSelectedNum(0);
-            opening.setStatus("0"); // 进行中
-            opening.setCreateBy(SecurityUtils.getUsername());
-            opening.setCreateTime(DateUtils.getNowDate());
-            
-            eduCourseOpeningMapper.insertEduCourseOpening(opening);
-            count++;
         }
         
         return count;
+    }
+
+    /**
+     * 根据申请创建开课安排
+     * 
+     * @param apply 开课申请
+     * @return 是否成功创建
+     */
+    private boolean createOpeningFromApply(EduCourseApply apply) {
+        // 如果申请中没有课程ID，需要先创建课程
+        Long courseId = apply.getCourseId();
+        if (courseId == null && apply.getCourseCode() != null)
+        {
+            // 检查课程代码是否已存在
+            EduCourse existCourse = eduCourseMapper.checkCourseCodeUnique(apply.getCourseCode());
+            if (existCourse != null)
+            {
+                courseId = existCourse.getCourseId();
+            }
+            else
+            {
+                // 创建新课程
+                EduCourse newCourse = new EduCourse();
+                newCourse.setCourseCode(apply.getCourseCode());
+                newCourse.setCourseName(apply.getCourseName());
+                newCourse.setCredit(apply.getCredit());
+                newCourse.setCourseType(apply.getCourseType());
+                newCourse.setDescription(apply.getDescription());
+                newCourse.setStatus("0"); // 正常状态
+                try {
+                    newCourse.setCreateBy(SecurityUtils.getUsername());
+                } catch (Exception e) {
+                    newCourse.setCreateBy("system");
+                }
+                newCourse.setCreateTime(DateUtils.getNowDate());
+                eduCourseMapper.insertEduCourse(newCourse);
+                courseId = newCourse.getCourseId();
+            }
+        }
+        
+        // 检查是否已存在相同的开课安排
+        EduCourseOpening query = new EduCourseOpening();
+        query.setTermId(apply.getTermId());
+        query.setCourseId(courseId);
+        query.setTeacherId(apply.getTeacherId());
+        query.setClassTime(apply.getClassTime());
+        query.setClassLocation(apply.getClassLocation());
+        List<EduCourseOpening> exists = eduCourseOpeningMapper.selectEduCourseOpeningList(query);
+        
+        if (!exists.isEmpty()) {
+            return false;
+        }
+
+        // 创建开课安排
+        EduCourseOpening opening = new EduCourseOpening();
+        opening.setTermId(apply.getTermId());
+        opening.setCourseId(courseId);
+        opening.setTeacherId(apply.getTeacherId());
+        opening.setClassTime(apply.getClassTime());
+        opening.setClassLocation(apply.getClassLocation());
+        opening.setMaxStudents(apply.getMaxStudents());
+        opening.setSelectedNum(0);
+        opening.setStatus("0"); // 进行中
+        try {
+            opening.setCreateBy(SecurityUtils.getUsername());
+        } catch (Exception e) {
+            opening.setCreateBy("system");
+        }
+        opening.setCreateTime(DateUtils.getNowDate());
+        
+        eduCourseOpeningMapper.insertEduCourseOpening(opening);
+        return true;
     }
 }

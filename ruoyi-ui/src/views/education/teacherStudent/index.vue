@@ -212,7 +212,7 @@ export default {
     },
     /** 返回我的课程 */
     goBack() {
-      this.$router.push('/education/teacherCourse');
+      this.$router.go(-1);
     },
     /** 录入成绩按钮操作 */
     handleInputScore(row) {

@@ -228,7 +228,8 @@ export default {
       const parts = classTime.split(/[,，]/);
       parts.forEach(part => {
         part = part.trim();
-        const match = part.match(/^(周[一二三四五六日])(\d+)-(\d+)节?$/);
+        // 匹配格式：周一1-2节、周一 1-2节、周一1-2、周一 1-2
+        const match = part.match(/^(周[一二三四五六日])\s*(\d+)-(\d+)节?$/);
         if (match) {
           const day = match[1];
           const start = parseInt(match[2]);
@@ -250,7 +251,13 @@ export default {
     },
     goToStudentList(course) {
       this.dialogVisible = false;
-      this.$router.push({ path: "/education/teacher/course", query: { openId: course.openId } });
+      this.$router.push({ 
+        path: "/education/teacher/course", 
+        query: { 
+          openId: course.openId,
+          courseName: course.courseName
+        } 
+      });
     }
   }
 };

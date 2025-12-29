@@ -87,6 +87,19 @@ export const constantRoutes = [
         meta: { title: '个人中心', icon: 'user' }
       }
     ]
+  },
+  {
+    path: '/education/teacher',
+    component: Layout,
+    hidden: true,
+    children: [
+      {
+        path: 'course',
+        component: () => import('@/views/education/teacherStudent/index'),
+        name: 'TeacherStudentList',
+        meta: { title: '学生名单', activeMenu: '/education/schedule/teacher' }
+      }
+    ]
   }
 ]
 
