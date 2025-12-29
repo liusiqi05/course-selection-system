@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.education.mapper.EduCourseApplyMapper">
+    
+    <resultMap type="com.ruoyi.education.domain.EduCourseApply" id="EduCourseApplyResult">
+        <result property="applyId"       column="apply_id"        />
+        <result property="termId"        column="term_id"         />
+        <result property="termName"      column="term_name"       />
+        <result property="teacherId"     column="teacher_id"      />
+        <result property="teacherName"   column="teacher_name"    />
+        <result property="courseId"      column="course_id"       />
+        <result property="courseCode"    column="course_code"     />
+        <result property="courseName"    column="course_name"     />
+        <result property="credit"        column="credit"          />
+        <result property="courseType"    column="course_type"     />
+        <result property="classTime"     column="class_time"      />
+        <result property="classLocation" column="class_location"  />
+        <result property="maxStudents"   column="max_students"    />
+        <result property="description"   column="description"     />
+        <result property="status"        column="status"          />
+        <result property="rejectReason"  column="reject_reason"   />
+        <result property="approveBy"     column="approve_by"      />
+        <result property="approveTime"   column="approve_time"    />
+        <result property="createBy"      column="create_by"       />
+        <result property="createTime"    column="create_time"     />
+        <result property="updateBy"      column="update_by"       />
+        <result property="updateTime"    column="update_time"     />
+        <result property="remark"        column="remark"          />
+    </resultMap>
+
+    <sql id="selectEduCourseApplyVo">
+        select a.apply_id, a.term_id, a.teacher_id, a.course_id, a.course_code, a.course_name,
+               a.credit, a.course_type, a.class_time, a.class_location, a.max_students,
+               a.description, a.status, a.reject_reason, a.approve_by, a.approve_time,
+               a.create_by, a.create_time, a.update_by, a.update_time, a.remark,
+               t.term_name,
+               u.nick_name as teacher_name
+        from edu_course_apply a
+        left join edu_term t on a.term_id = t.term_id
+        left join edu_teacher et on a.teacher_id = et.teacher_id
+        left join sys_user u on et.user_id = u.user_id
+    </sql>
+
+    <select id="selectEduCourseApplyList" parameterType="com.ruoyi.education.domain.EduCourseApply" resultMap="EduCourseApplyResult">
+        <include refid="selectEduCourseApplyVo"/>
+        <where>  
+            <if test="termId != null"> and a.term_id = #{termId}</if>
+            <if test="teacherId != null"> and a.teacher_id = #{teacherId}</if>
+            <if test="courseName != null and courseName != ''"> and a.course_name like concat('%', #{courseName}, '%')</if>
+            <if test="status != null and status != ''"> and a.status = #{status}</if>
+        </where>
+        order by a.apply_id desc
+    </select>
+
+    <select id="selectEduCourseApplyByApplyId" parameterType="Long" resultMap="EduCourseApplyResult">
+        <include refid="selectEduCourseApplyVo"/>
+        where a.apply_id = #{applyId}
+    </select>
+
+    <select id="selectEduCourseApplyByTeacherId" parameterType="Long" resultMap="EduCourseApplyResult">
+        <include refid="selectEduCourseApplyVo"/>
+        where a.teacher_id = #{teacherId}
+        order by a.apply_id desc
+    </select>
+
+    <select id="selectApprovedApplyByTermId" parameterType="Long" resultMap="EduCourseApplyResult">
+        <include refid="selectEduCourseApplyVo"/>
+        where a.term_id = #{termId} and a.status = '1'
+    </select>
+
+    <select id="countPendingApplyByTermId" parameterType="Long" resultType="int">
+        select count(*) from edu_course_apply
+        where term_id = #{termId} and status = '0'
+    </select>
+        
+    <insert id="insertEduCourseApply" parameterType="com.ruoyi.education.domain.EduCourseApply" useGeneratedKeys="true" keyProperty="applyId">
+        insert into edu_course_apply
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="termId != null">term_id,</if>
+            <if test="teacherId != null">teacher_id,</if>
+            <if test="courseId != null">course_id,</if>
+            <if test="courseCode != null">course_code,</if>
+            <if test="courseName != null and courseName != ''">course_name,</if>
+            <if test="credit != null">credit,</if>
+            <if test="courseType != null">course_type,</if>
+            <if test="classTime != null and classTime != ''">class_time,</if>
+            <if test="classLocation != null and classLocation != ''">class_location,</if>
+            <if test="maxStudents != null">max_students,</if>
+            <if test="description != null">description,</if>
+            <if test="status != null">status,</if>
+            <if test="createBy != null">create_by,</if>
+            create_time,
+            <if test="remark != null">remark,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="termId != null">#{termId},</if>
+            <if test="teacherId != null">#{teacherId},</if>
+            <if test="courseId != null">#{courseId},</if>
+            <if test="courseCode != null">#{courseCode},</if>
+            <if test="courseName != null and courseName != ''">#{courseName},</if>
+            <if test="credit != null">#{credit},</if>
+            <if test="courseType != null">#{courseType},</if>
+            <if test="classTime != null and classTime != ''">#{classTime},</if>
+            <if test="classLocation != null and classLocation != ''">#{classLocation},</if>
+            <if test="maxStudents != null">#{maxStudents},</if>
+            <if test="description != null">#{description},</if>
+            <if test="status != null">#{status},</if>
+            <if test="createBy != null">#{createBy},</if>
+            sysdate(),
+            <if test="remark != null">#{remark},</if>
+        </trim>
+    </insert>
+
+    <update id="updateEduCourseApply" parameterType="com.ruoyi.education.domain.EduCourseApply">
+        update edu_course_apply
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="termId != null">term_id = #{termId},</if>
+            <if test="teacherId != null">teacher_id = #{teacherId},</if>
+            <if test="courseId != null">course_id = #{courseId},</if>
+            <if test="courseCode != null">course_code = #{courseCode},</if>
+            <if test="courseName != null and courseName != ''">course_name = #{courseName},</if>
+            <if test="credit != null">credit = #{credit},</if>
+            <if test="courseType != null">course_type = #{courseType},</if>
+            <if test="classTime != null and classTime != ''">class_time = #{classTime},</if>
+            <if test="classLocation != null and classLocation != ''">class_location = #{classLocation},</if>
+            <if test="maxStudents != null">max_students = #{maxStudents},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            update_time = sysdate(),
+            <if test="remark != null">remark = #{remark},</if>
+        </trim>
+        where apply_id = #{applyId} and status = '0'
+    </update>
+
+    <update id="approveEduCourseApply">
+        update edu_course_apply
+        set status = #{status},
+            reject_reason = #{rejectReason},
+            approve_by = #{approveBy},
+            approve_time = sysdate(),
+            update_time = sysdate()
+        where apply_id = #{applyId} and status = '0'
+    </update>
+
+    <update id="batchApproveEduCourseApply">
+        update edu_course_apply
+        set status = #{status},
+            approve_by = #{approveBy},
+            approve_time = sysdate(),
+            update_time = sysdate()
+        where status = '0' and apply_id in
+        <foreach item="applyId" collection="applyIds" open="(" separator="," close=")">
+            #{applyId}
+        </foreach>
+    </update>
+
+    <delete id="deleteEduCourseApplyByApplyId" parameterType="Long">
+        delete from edu_course_apply where apply_id = #{applyId} and status = '0'
+    </delete>
+
+    <delete id="deleteEduCourseApplyByApplyIds" parameterType="String">
+        delete from edu_course_apply where status = '0' and apply_id in 
+        <foreach item="applyId" collection="array" open="(" separator="," close=")">
+            #{applyId}
+        </foreach>
+    </delete>
+</mapper>

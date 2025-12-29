@@ -31,6 +31,12 @@ import com.ruoyi.system.mapper.SysUserRoleMapper;
 import com.ruoyi.system.service.ISysConfigService;
 import com.ruoyi.system.service.ISysDeptService;
 import com.ruoyi.system.service.ISysUserService;
+import com.ruoyi.system.domain.EduStudent;
+import com.ruoyi.system.domain.EduTeacher;
+import com.ruoyi.system.domain.EduOfficeTeacher;
+import com.ruoyi.system.mapper.EduStudentMapper;
+import com.ruoyi.system.mapper.EduTeacherMapper;
+import com.ruoyi.system.mapper.EduOfficeTeacherMapper;
 
 /**
  * 用户 业务层处理
@@ -62,6 +68,15 @@ public class SysUserServiceImpl implements ISysUserService
 
     @Autowired
     private ISysDeptService deptService;
+
+    @Autowired
+    private EduStudentMapper eduStudentMapper;
+
+    @Autowired
+    private EduTeacherMapper eduTeacherMapper;
+
+    @Autowired
+    private EduOfficeTeacherMapper eduOfficeTeacherMapper;
 
     @Autowired
     protected Validator validator;
@@ -267,7 +282,73 @@ public class SysUserServiceImpl implements ISysUserService
         insertUserPost(user);
         // 新增用户与角色管理
         insertUserRole(user);
+        
+        // 同步插入业务表数据
+        syncUserToBusinessTable(user);
+        
         return rows;
+    }
+
+    /**
+     * 同步用户数据到业务表
+     */
+    private void syncUserToBusinessTable(SysUser user) {
+        Long[] roleIds = user.getRoleIds();
+        if (StringUtils.isEmpty(roleIds)) {
+            return;
+        }
+        
+        for (Long roleId : roleIds) {
+            // 学生角色 (roleId=3)
+            if (roleId == 3L) {
+                EduStudent student = new EduStudent();
+                student.setUserId(user.getUserId());
+                student.setStudentNo(user.getUserName()); // 默认学号为用户名
+                student.setNickName(user.getNickName());
+                student.setSex(user.getSex());
+                student.setPhonenumber(user.getPhonenumber());
+                student.setEmail(user.getEmail());
+                student.setCreateTime(new Date());
+                // 避免重复插入
+                try {
+                    eduStudentMapper.insertEduStudent(student);
+                } catch (Exception e) {
+                    log.warn("同步插入学生表失败: {}", e.getMessage());
+                }
+            }
+            // 教师角色 (roleId=2)
+            else if (roleId == 2L) {
+                EduTeacher teacher = new EduTeacher();
+                teacher.setUserId(user.getUserId());
+                teacher.setNickName(user.getNickName());
+                teacher.setSex(user.getSex());
+                teacher.setPhonenumber(user.getPhonenumber());
+                teacher.setEmail(user.getEmail());
+                teacher.setCreateTime(new Date());
+                try {
+                    eduTeacherMapper.insertEduTeacher(teacher);
+                } catch (Exception e) {
+                    log.warn("同步插入教师表失败: {}", e.getMessage());
+                }
+            }
+            // 教务处老师角色 (roleId=4)
+            else if (roleId == 4L) {
+                EduOfficeTeacher officeTeacher = new EduOfficeTeacher();
+                officeTeacher.setUserId(user.getUserId());
+                officeTeacher.setName(user.getNickName());
+                officeTeacher.setGender(user.getSex().equals("0") ? "M" : "F");
+                officeTeacher.setPhone(user.getPhonenumber());
+                officeTeacher.setEmail(user.getEmail());
+                officeTeacher.setDeptId(user.getDeptId());
+                officeTeacher.setStatus("0"); // 默认在职
+                officeTeacher.setCreateTime(new Date());
+                try {
+                    eduOfficeTeacherMapper.insertEduOfficeTeacher(officeTeacher);
+                } catch (Exception e) {
+                    log.warn("同步插入教务处老师表失败: {}", e.getMessage());
+                }
+            }
+        }
     }
 
     /**

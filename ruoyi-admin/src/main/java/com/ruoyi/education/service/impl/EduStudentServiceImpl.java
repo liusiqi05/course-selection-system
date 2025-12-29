@@ -9,8 +9,8 @@ import com.ruoyi.system.service.ISysUserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.ruoyi.education.mapper.EduStudentMapper;
-import com.ruoyi.education.domain.EduStudent;
+import com.ruoyi.system.mapper.EduStudentMapper;
+import com.ruoyi.system.domain.EduStudent;
 import com.ruoyi.education.service.IEduStudentService;
 
 /**

@@ -60,3 +60,27 @@ export function listMyCourseAsTeacher(query) {
     params: query
   })
 }
+
+// 获取教师待打分的课程列表
+export function getPendingScoreCourses() {
+  return request({
+    url: '/education/opening/pendingScore',
+    method: 'get'
+  })
+}
+
+// 教师结课
+export function finishCourse(openId) {
+  return request({
+    url: '/education/opening/finish/' + openId,
+    method: 'put'
+  })
+}
+
+// 教师取消结课
+export function cancelFinishCourse(openId) {
+  return request({
+    url: '/education/opening/cancelFinish/' + openId,
+    method: 'put'
+  })
+}

@@ -109,3 +109,29 @@ export function getTermGpaList() {
     method: 'get'
   })
 }
+
+// 教师查看某开课的学生名单
+export function getMyStudents(openId) {
+  return request({
+    url: '/education/selection/myStudents/' + openId,
+    method: 'get'
+  })
+}
+
+// 教师录入学生成绩
+export function inputScore(data) {
+  return request({
+    url: '/education/selection/inputScore',
+    method: 'put',
+    data: data
+  })
+}
+
+// 教师批量录入成绩
+export function batchInputScore(data) {
+  return request({
+    url: '/education/selection/batchInputScore',
+    method: 'put',
+    data: data
+  })
+}

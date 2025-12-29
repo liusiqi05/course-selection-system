@@ -79,6 +79,9 @@ public class EduCourseEvaluation extends BaseEntity
     /** 学期名称 */
     private String termName;
 
+    /** 学期ID（用于查询筛选） */
+    private Long termId;
+
     /** 平均分 */
     private Double avgScore;
 
@@ -250,6 +253,16 @@ public class EduCourseEvaluation extends BaseEntity
     public void setTermName(String termName)
     {
         this.termName = termName;
+    }
+
+    public Long getTermId()
+    {
+        return termId;
+    }
+
+    public void setTermId(Long termId)
+    {
+        this.termId = termId;
     }
 
     public Double getAvgScore()

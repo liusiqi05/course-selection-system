@@ -17,9 +17,12 @@ import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.enums.BusinessType;
 import com.ruoyi.education.domain.EduCourseEvaluation;
-import com.ruoyi.education.domain.EduStudent;
+import com.ruoyi.system.domain.EduStudent;
+import com.ruoyi.system.domain.EduTeacher;
 import com.ruoyi.education.service.IEduCourseEvaluationService;
 import com.ruoyi.education.service.IEduStudentService;
+import com.ruoyi.education.service.IEduTeacherService;
+import com.ruoyi.education.mapper.EduCourseEvaluationMapper;
 import com.ruoyi.common.utils.poi.ExcelUtil;
 import com.ruoyi.common.core.page.TableDataInfo;
 
@@ -38,6 +41,12 @@ public class EduCourseEvaluationController extends BaseController
 
     @Autowired
     private IEduStudentService eduStudentService;
+
+    @Autowired
+    private IEduTeacherService eduTeacherService;
+
+    @Autowired
+    private EduCourseEvaluationMapper eduCourseEvaluationMapper;
 
     /**
      * 查询课程评价列表
@@ -122,5 +131,63 @@ public class EduCourseEvaluationController extends BaseController
     public AjaxResult remove(@PathVariable Long[] evalIds)
     {
         return toAjax(eduCourseEvaluationService.deleteEduCourseEvaluationByEvalIds(evalIds));
+    }
+
+    /**
+     * 教师查看自己课程的评价列表
+     */
+    @PreAuthorize("@ss.hasPermi('education:evaluation:teacher')")
+    @GetMapping("/teacher/list")
+    public TableDataInfo teacherEvaluationList()
+    {
+        EduTeacher teacher = eduTeacherService.selectEduTeacherByUserId(getUserId());
+        if (teacher == null)
+        {
+            return getDataTable(new java.util.ArrayList<>());
+        }
+        startPage();
+        List<EduCourseEvaluation> list = eduCourseEvaluationMapper.selectEvaluationByTeacherId(teacher.getTeacherId());
+        return getDataTable(list);
+    }
+
+    /**
+     * 教师查看自己课程的评价统计汇总
+     */
+    @PreAuthorize("@ss.hasPermi('education:evaluation:teacher')")
+    @GetMapping("/teacher/stats")
+    public AjaxResult teacherEvaluationStats()
+    {
+        EduTeacher teacher = eduTeacherService.selectEduTeacherByUserId(getUserId());
+        if (teacher == null)
+        {
+            return success(new java.util.ArrayList<>());
+        }
+        List<EduCourseEvaluation> list = eduCourseEvaluationMapper.selectEvaluationStatsByTeacherId(teacher.getTeacherId());
+        return success(list);
+    }
+
+    /**
+     * 管理员/教务老师查看所有评价列表
+     */
+    @PreAuthorize("@ss.hasAnyRoles('admin,leader')")
+    @GetMapping("/admin/list")
+    public TableDataInfo adminEvaluationList(EduCourseEvaluation eduCourseEvaluation)
+    {
+        startPage();
+        List<EduCourseEvaluation> list = eduCourseEvaluationService.selectEduCourseEvaluationList(eduCourseEvaluation);
+        return getDataTable(list);
+    }
+
+    /**
+     * 管理员/教务老师导出评价数据
+     */
+    @PreAuthorize("@ss.hasAnyRoles('admin,leader')")
+    @Log(title = "导出评价数据", businessType = BusinessType.EXPORT)
+    @PostMapping("/admin/export")
+    public void adminExport(HttpServletResponse response, EduCourseEvaluation eduCourseEvaluation)
+    {
+        List<EduCourseEvaluation> list = eduCourseEvaluationService.selectEduCourseEvaluationList(eduCourseEvaluation);
+        ExcelUtil<EduCourseEvaluation> util = new ExcelUtil<EduCourseEvaluation>(EduCourseEvaluation.class);
+        util.exportExcel(response, list, "课程评价数据");
     }
 }

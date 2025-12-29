@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.EduOfficeTeacherMapper">
+    
+    <resultMap type="com.ruoyi.system.domain.EduOfficeTeacher" id="EduOfficeTeacherResult">
+        <result property="officeTeacherId"    column="office_teacher_id"    />
+        <result property="userId"    column="user_id"    />
+        <result property="name"    column="name"    />
+        <result property="gender"    column="gender"    />
+        <result property="phone"    column="phone"    />
+        <result property="email"    column="email"    />
+        <result property="deptId"    column="dept_id"    />
+        <result property="position"    column="position"    />
+        <result property="status"    column="status"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateTime"    column="update_time"    />
+    </resultMap>
+
+    <sql id="selectEduOfficeTeacherVo">
+        select office_teacher_id, user_id, name, gender, phone, email, dept_id, position, status, create_time, update_time from edu_office_teacher
+    </sql>
+
+    <select id="selectEduOfficeTeacherList" parameterType="EduOfficeTeacher" resultMap="EduOfficeTeacherResult">
+        <include refid="selectEduOfficeTeacherVo"/>
+        <where>  
+            <if test="userId != null "> and user_id = #{userId}</if>
+            <if test="name != null  and name != ''"> and name like concat('%', #{name}, '%')</if>
+            <if test="gender != null  and gender != ''"> and gender = #{gender}</if>
+            <if test="phone != null  and phone != ''"> and phone = #{phone}</if>
+            <if test="email != null  and email != ''"> and email = #{email}</if>
+            <if test="deptId != null "> and dept_id = #{deptId}</if>
+            <if test="position != null  and position != ''"> and position = #{position}</if>
+            <if test="status != null  and status != ''"> and status = #{status}</if>
+        </where>
+    </select>
+    
+    <select id="selectEduOfficeTeacherByOfficeTeacherId" parameterType="Long" resultMap="EduOfficeTeacherResult">
+        <include refid="selectEduOfficeTeacherVo"/>
+        where office_teacher_id = #{officeTeacherId}
+    </select>
+        
+    <insert id="insertEduOfficeTeacher" parameterType="EduOfficeTeacher" useGeneratedKeys="true" keyProperty="officeTeacherId">
+        insert into edu_office_teacher
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="userId != null">user_id,</if>
+            <if test="name != null and name != ''">name,</if>
+            <if test="gender != null">gender,</if>
+            <if test="phone != null">phone,</if>
+            <if test="email != null">email,</if>
+            <if test="deptId != null">dept_id,</if>
+            <if test="position != null">position,</if>
+            <if test="status != null">status,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateTime != null">update_time,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="userId != null">#{userId},</if>
+            <if test="name != null and name != ''">#{name},</if>
+            <if test="gender != null">#{gender},</if>
+            <if test="phone != null">#{phone},</if>
+            <if test="email != null">#{email},</if>
+            <if test="deptId != null">#{deptId},</if>
+            <if test="position != null">#{position},</if>
+            <if test="status != null">#{status},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+         </trim>
+    </insert>
+
+    <update id="updateEduOfficeTeacher" parameterType="EduOfficeTeacher">
+        update edu_office_teacher
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="name != null and name != ''">name = #{name},</if>
+            <if test="gender != null">gender = #{gender},</if>
+            <if test="phone != null">phone = #{phone},</if>
+            <if test="email != null">email = #{email},</if>
+            <if test="deptId != null">dept_id = #{deptId},</if>
+            <if test="position != null">position = #{position},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where office_teacher_id = #{officeTeacherId}
+    </update>
+
+    <delete id="deleteEduOfficeTeacherByOfficeTeacherId" parameterType="Long">
+        delete from edu_office_teacher where office_teacher_id = #{officeTeacherId}
+    </delete>
+
+    <delete id="deleteEduOfficeTeacherByOfficeTeacherIds" parameterType="String">
+        delete from edu_office_teacher where office_teacher_id in 
+        <foreach item="officeTeacherId" collection="array" open="(" separator="," close=")">
+            #{officeTeacherId}
+        </foreach>
+    </delete>
+</mapper>

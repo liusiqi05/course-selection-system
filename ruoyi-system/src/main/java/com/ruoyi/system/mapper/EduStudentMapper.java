@@ -1,7 +1,7 @@
-package com.ruoyi.education.mapper;
+package com.ruoyi.system.mapper;
 
 import java.util.List;
-import com.ruoyi.education.domain.EduStudent;
+import com.ruoyi.system.domain.EduStudent;
 
 /**
  * 学生信息Mapper接口
@@ -74,4 +74,11 @@ public interface EduStudentMapper
      * @return 结果
      */
     public int deleteEduStudentByUserId(Long userId);
+
+    /**
+     * 查询学生总数
+     * 
+     * @return 学生总数
+     */
+    public int selectStudentCount();
 }

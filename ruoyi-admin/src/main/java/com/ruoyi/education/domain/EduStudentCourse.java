@@ -33,6 +33,10 @@ public class EduStudentCourse extends BaseEntity
     @Excel(name = "学生姓名")
     private String studentName;
 
+    /** 班级 */
+    @Excel(name = "班级")
+    private String className;
+
     /** 开课ID */
     @Excel(name = "开课ID")
     private Long openId;
@@ -93,6 +97,21 @@ public class EduStudentCourse extends BaseEntity
     /** 上课地点 */
     private String classLocation;
 
+    /** 补考成绩 */
+    @Excel(name = "补考成绩")
+    private BigDecimal makeupScore;
+
+    /** 补考时间 */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private Date makeupTime;
+
+    /** 是否需要重修(0否 1是) */
+    @Excel(name = "是否需要重修", readConverterExp = "0=否,1=是")
+    private String needRetake;
+
+    /** 最终成绩(补考通过按60算) */
+    private BigDecimal finalScore;
+
     public void setScId(Long scId) 
     {
         this.scId = scId;
@@ -131,6 +150,16 @@ public class EduStudentCourse extends BaseEntity
     public String getStudentName() 
     {
         return studentName;
+    }
+
+    public void setClassName(String className) 
+    {
+        this.className = className;
+    }
+
+    public String getClassName() 
+    {
+        return className;
     }
 
     public void setOpenId(Long openId) 
@@ -291,6 +320,46 @@ public class EduStudentCourse extends BaseEntity
     public void setClassLocation(String classLocation)
     {
         this.classLocation = classLocation;
+    }
+
+    public BigDecimal getMakeupScore()
+    {
+        return makeupScore;
+    }
+
+    public void setMakeupScore(BigDecimal makeupScore)
+    {
+        this.makeupScore = makeupScore;
+    }
+
+    public Date getMakeupTime()
+    {
+        return makeupTime;
+    }
+
+    public void setMakeupTime(Date makeupTime)
+    {
+        this.makeupTime = makeupTime;
+    }
+
+    public String getNeedRetake()
+    {
+        return needRetake;
+    }
+
+    public void setNeedRetake(String needRetake)
+    {
+        this.needRetake = needRetake;
+    }
+
+    public BigDecimal getFinalScore()
+    {
+        return finalScore;
+    }
+
+    public void setFinalScore(BigDecimal finalScore)
+    {
+        this.finalScore = finalScore;
     }
 
     @Override

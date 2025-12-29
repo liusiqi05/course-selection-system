@@ -54,6 +54,27 @@ public interface EduStudentCourseMapper
     public EduStudentCourse checkSelected(@Param("studentId") Long studentId, @Param("openId") Long openId);
 
     /**
+     * 检查学生是否已选同名课程（同一学期内）
+     * 
+     * @param studentId 学生ID
+     * @param termId 学期ID
+     * @param courseName 课程名称
+     * @return 选课记录
+     */
+    public EduStudentCourse checkSameCourseSelected(@Param("studentId") Long studentId, 
+                                                     @Param("termId") Long termId,
+                                                     @Param("courseName") String courseName);
+
+    /**
+     * 获取学生在指定学期已选的课程名称列表
+     * 
+     * @param studentId 学生ID
+     * @param termId 学期ID
+     * @return 课程名称列表
+     */
+    public List<String> selectSelectedCourseNames(@Param("studentId") Long studentId, @Param("termId") Long termId);
+
+    /**
      * 查询学生的成绩列表
      * 
      * @param studentId 学生ID
@@ -130,4 +151,20 @@ public interface EduStudentCourseMapper
      * @return 学期GPA列表
      */
     public List<java.util.Map<String, Object>> selectTermGpaList(Long studentId);
+
+    /**
+     * 查询挂科学生列表（用于补考成绩录入）
+     * 
+     * @param openId 开课ID
+     * @return 挂科学生列表
+     */
+    public List<EduStudentCourse> selectFailedStudentsByOpenId(Long openId);
+
+    /**
+     * 录入补考成绩（只能录入一次）
+     * 
+     * @param eduStudentCourse 选课记录
+     * @return 结果
+     */
+    public int updateMakeupScore(EduStudentCourse eduStudentCourse);
 }

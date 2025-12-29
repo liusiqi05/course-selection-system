@@ -19,6 +19,12 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="maxStudents"    column="max_students"    />
         <result property="selectedNum"    column="selected_num"    />
         <result property="status"         column="status"          />
+        <result property="scoreDeadline"  column="score_deadline"  />
+        <result property="isFinished"     column="is_finished"     />
+        <result property="finishTime"     column="finish_time"     />
+        <result property="usualRatio"     column="usual_ratio"     />
+        <result property="examRatio"      column="exam_ratio"      />
+        <result property="pendingCount"   column="pending_count"   />
         <result property="createBy"       column="create_by"       />
         <result property="createTime"     column="create_time"     />
         <result property="updateBy"       column="update_by"       />
@@ -28,8 +34,25 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 
     <sql id="selectEduCourseOpeningVo">
         select o.open_id, o.term_id, o.course_id, o.teacher_id, o.class_time, o.class_location, 
-               o.max_students, o.selected_num, o.status, o.create_by, o.create_time, 
-               o.update_by, o.update_time, o.remark,
+               o.max_students, o.selected_num, o.status, o.score_deadline, o.is_finished, o.finish_time,
+               o.usual_ratio, o.exam_ratio,
+               o.create_by, o.create_time, o.update_by, o.update_time, o.remark,
+               t.term_name,
+               c.course_code, c.course_name, c.credit,
+               u.nick_name as teacher_name
+        from edu_course_opening o
+        left join edu_term t on o.term_id = t.term_id
+        left join edu_course c on o.course_id = c.course_id
+        left join edu_teacher et on o.teacher_id = et.teacher_id
+        left join sys_user u on et.user_id = u.user_id
+    </sql>
+
+    <!-- 避免可选课程列表重复的查询片段（带distinct） -->
+    <sql id="selectEduCourseOpeningVoDistinct">
+        select distinct o.open_id, o.term_id, o.course_id, o.teacher_id, o.class_time, o.class_location,
+               o.max_students, o.selected_num, o.status, o.score_deadline, o.is_finished, o.finish_time,
+               o.usual_ratio, o.exam_ratio,
+               o.create_by, o.create_time, o.update_by, o.update_time, o.remark,
                t.term_name,
                c.course_code, c.course_name, c.credit,
                u.nick_name as teacher_name
@@ -54,7 +77,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </select>
 
     <select id="selectAvailableCourseList" parameterType="com.ruoyi.education.domain.EduCourseOpening" resultMap="EduCourseOpeningResult">
-        <include refid="selectEduCourseOpeningVo"/>
+        <include refid="selectEduCourseOpeningVoDistinct"/>
         <where>
             o.status = '0'
             and o.selected_num &lt; o.max_students
@@ -81,6 +104,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="maxStudents != null">max_students,</if>
             <if test="selectedNum != null">selected_num,</if>
             <if test="status != null">status,</if>
+            <if test="scoreDeadline != null">score_deadline,</if>
             <if test="createBy != null">create_by,</if>
             <if test="remark != null">remark,</if>
             create_time
@@ -94,6 +118,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="maxStudents != null">#{maxStudents},</if>
             <if test="selectedNum != null">#{selectedNum},</if>
             <if test="status != null">#{status},</if>
+            <if test="scoreDeadline != null">#{scoreDeadline},</if>
             <if test="createBy != null">#{createBy},</if>
             <if test="remark != null">#{remark},</if>
             sysdate()
@@ -111,6 +136,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="maxStudents != null">max_students = #{maxStudents},</if>
             <if test="selectedNum != null">selected_num = #{selectedNum},</if>
             <if test="status != null">status = #{status},</if>
+            <if test="scoreDeadline != null">score_deadline = #{scoreDeadline},</if>
+            <if test="usualRatio != null">usual_ratio = #{usualRatio},</if>
+            <if test="examRatio != null">exam_ratio = #{examRatio},</if>
             <if test="updateBy != null">update_by = #{updateBy},</if>
             <if test="remark != null">remark = #{remark},</if>
             update_time = sysdate()
@@ -141,9 +169,13 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         update edu_course_opening set status = '1', update_time = sysdate() where term_id = #{termId}
     </update>
 
+    <update id="openTermCourses" parameterType="Long">
+        update edu_course_opening set status = '0', update_time = sysdate() where term_id = #{termId}
+    </update>
+
     <select id="selectPendingScoreCourses" parameterType="Long" resultMap="EduCourseOpeningResult">
         select o.open_id, o.term_id, o.course_id, o.teacher_id, o.class_time, o.class_location, 
-               o.max_students, o.selected_num, o.status, t.term_name, c.course_code, c.course_name, c.credit,
+               o.max_students, o.selected_num, o.status, o.score_deadline, t.term_name, c.course_code, c.course_name, c.credit,
                (select count(*) from edu_student_course sc where sc.open_id = o.open_id and sc.score is null) as pending_count
         from edu_course_opening o
         left join edu_term t on o.term_id = t.term_id
@@ -152,6 +184,26 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
           and o.status = '1'
           and exists (select 1 from edu_student_course sc where sc.open_id = o.open_id and sc.score is null)
         order by o.term_id desc, o.open_id
+    </select>
+
+    <!-- 教师的课程列表，包含待录入人数 -->
+    <select id="selectTeacherCoursesWithPending" parameterType="com.ruoyi.education.domain.EduCourseOpening" resultMap="EduCourseOpeningResult">
+        select o.open_id, o.term_id, o.course_id, o.teacher_id, o.class_time, o.class_location, 
+               o.max_students, o.selected_num, o.status, o.score_deadline, o.create_by, o.create_time, 
+               o.update_by, o.update_time, o.remark,
+               t.term_name, c.course_code, c.course_name, c.credit, u.nick_name as teacher_name,
+               (select count(*) from edu_student_course sc where sc.open_id = o.open_id and sc.score is null) as pending_count
+        from edu_course_opening o
+        left join edu_term t on o.term_id = t.term_id
+        left join edu_course c on o.course_id = c.course_id
+        left join edu_teacher et on o.teacher_id = et.teacher_id
+        left join sys_user u on et.user_id = u.user_id
+        <where>
+            <if test="teacherId != null"> and o.teacher_id = #{teacherId}</if>
+            <if test="termId != null"> and o.term_id = #{termId}</if>
+            <if test="status != null and status != ''"> and o.status = #{status}</if>
+        </where>
+        order by o.term_id desc, o.open_id desc
     </select>
 
     <select id="selectByStudentAndTerm" resultMap="EduCourseOpeningResult">
@@ -165,5 +217,50 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
           and o.term_id = #{termId}
           and sc.status = '0'
         order by o.open_id
+    </select>
+
+    <!-- 检查学期是否有未录入成绩的课程 -->
+    <select id="countPendingScoreByTermId" parameterType="Long" resultType="int">
+        select count(*) from edu_student_course sc
+        inner join edu_course_opening o on sc.open_id = o.open_id
+        where o.term_id = #{termId} and sc.score is null
+    </select>
+
+    <!-- 查询学期中未完成成绩录入的课程列表（管理员用） -->
+    <select id="selectTermCoursesWithPending" parameterType="Long" resultMap="EduCourseOpeningResult">
+        select o.open_id, o.term_id, o.course_id, o.teacher_id, o.class_time, o.class_location, 
+               o.max_students, o.selected_num, o.status, o.score_deadline, t.term_name, 
+               c.course_code, c.course_name, c.credit, u.nick_name as teacher_name,
+               (select count(*) from edu_student_course sc where sc.open_id = o.open_id and sc.score is null) as pending_count
+        from edu_course_opening o
+        left join edu_term t on o.term_id = t.term_id
+        left join edu_course c on o.course_id = c.course_id
+        left join edu_teacher et on o.teacher_id = et.teacher_id
+        left join sys_user u on et.user_id = u.user_id
+        where o.term_id = #{termId}
+        order by pending_count desc, o.open_id
+    </select>
+
+    <select id="selectCourseCountByTermId" parameterType="Long" resultType="int">
+        select count(*) from edu_course_opening where term_id = #{termId}
+    </select>
+
+    <!-- 结课操作（将status改为1-已结课） -->
+    <update id="finishCourse" parameterType="Long">
+        update edu_course_opening 
+        set status = '1', is_finished = '1', finish_time = now(), update_time = now()
+        where open_id = #{openId}
+    </update>
+
+    <!-- 取消结课（将status改回0-进行中） -->
+    <update id="cancelFinishCourse" parameterType="Long">
+        update edu_course_opening 
+        set status = '0', is_finished = '0', finish_time = null, update_time = now()
+        where open_id = #{openId}
+    </update>
+
+    <!-- 调用存储过程重新计算课程的所有学生成绩 -->
+    <select id="recalcCourseScores" parameterType="Long" statementType="CALLABLE">
+        {CALL recalc_course_scores(#{openId, mode=IN, jdbcType=BIGINT})}
     </select>
 </mapper>

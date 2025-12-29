@@ -120,4 +120,20 @@ public interface IEduStudentCourseService
      * @return 学期GPA列表
      */
     public java.util.List<java.util.Map<String, Object>> selectTermGpaList(Long studentId);
+
+    /**
+     * 查询挂科学生列表（用于补考成绩录入）
+     * 
+     * @param openId 开课ID
+     * @return 挂科学生列表
+     */
+    public java.util.List<EduStudentCourse> selectFailedStudentsByOpenId(Long openId);
+
+    /**
+     * 录入补考成绩（只能录入一次）
+     * 
+     * @param eduStudentCourse 选课记录
+     * @return 结果
+     */
+    public AjaxResult submitMakeupScore(EduStudentCourse eduStudentCourse);
 }

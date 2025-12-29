@@ -7,6 +7,8 @@ import java.util.HashSet;
 import java.util.Set;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.utils.DateUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +29,7 @@ import com.ruoyi.education.service.IEduStudentCourseService;
 @Service
 public class EduStudentCourseServiceImpl implements IEduStudentCourseService 
 {
+    private static final Logger logger = LoggerFactory.getLogger(EduStudentCourseServiceImpl.class);
     @Autowired
     private EduStudentCourseMapper eduStudentCourseMapper;
 
@@ -83,9 +86,7 @@ public class EduStudentCourseServiceImpl implements IEduStudentCourseService
     @Override
     public List<EduStudentCourse> selectStudentsByOpenId(Long openId)
     {
-        EduStudentCourse query = new EduStudentCourse();
-        query.setOpenId(openId);
-        return eduStudentCourseMapper.selectEduStudentCourseList(query);
+        return eduStudentCourseMapper.selectStudentsByOpenId(openId);
     }
 
     /**
@@ -136,11 +137,26 @@ public class EduStudentCourseServiceImpl implements IEduStudentCourseService
             return AjaxResult.error("选课已结束，结束时间：" + DateUtils.parseDateToStr("yyyy-MM-dd HH:mm", term.getSelectionEnd()));
         }
         
-        // 3. 检查是否已选该课程
+        // 3. 检查是否已选该课程（任何状态都算重复）
         EduStudentCourse existing = eduStudentCourseMapper.checkSelected(studentId, openId);
         if (existing != null)
         {
-            return AjaxResult.error("您已选择该课程，请勿重复选择");
+            // 根据不同的status返回不同提示
+            if ("0".equals(existing.getStatus())) {
+                return AjaxResult.error("您已选择该课程，请勿重复选择");
+            } else if ("1".equals(existing.getStatus())) {
+                return AjaxResult.error("该课程已结课，无法重复选择");
+            } else {
+                return AjaxResult.error("您与该课程已有关联记录，无法重复选择");
+            }
+        }
+        
+        // 3.1 检查是否已选同名课程（同一学期内不能选择同名课程）
+        EduStudentCourse sameCourse = eduStudentCourseMapper.checkSameCourseSelected(
+            studentId, opening.getTermId(), opening.getCourseName());
+        if (sameCourse != null)
+        {
+            return AjaxResult.error("您已选择同名课程【" + opening.getCourseName() + "】，不能重复选择");
         }
         
         // 4. 检查课程状态和容量
@@ -161,18 +177,27 @@ public class EduStudentCourseServiceImpl implements IEduStudentCourseService
         }
         
         // 6. 创建选课记录
-        EduStudentCourse studentCourse = new EduStudentCourse();
-        studentCourse.setStudentId(studentId);
-        studentCourse.setOpenId(openId);
-        studentCourse.setEnrollTime(new Date());
-        studentCourse.setStatus("0"); // 正常状态
-        studentCourse.setCreateTime(DateUtils.getNowDate());
-        eduStudentCourseMapper.insertEduStudentCourse(studentCourse);
-        
-        // 7. 更新已选人数
-        eduCourseOpeningMapper.incrementSelectedNum(openId);
-        
-        return AjaxResult.success("选课成功");
+        try {
+            EduStudentCourse studentCourse = new EduStudentCourse();
+            studentCourse.setStudentId(studentId);
+            studentCourse.setOpenId(openId);
+            studentCourse.setEnrollTime(new Date());
+            studentCourse.setStatus("0"); // 正常状态
+            studentCourse.setCreateTime(DateUtils.getNowDate());
+            eduStudentCourseMapper.insertEduStudentCourse(studentCourse);
+            
+            // 7. 更新已选人数
+            eduCourseOpeningMapper.incrementSelectedNum(openId);
+            
+            return AjaxResult.success("选课成功");
+        } catch (Exception e) {
+            logger.error("选课异常: studentId={}, openId={}", studentId, openId, e);
+            // 检查是否是重复异常
+            if (e.getMessage() != null && e.getMessage().contains("uk_student_open")) {
+                return AjaxResult.error("选课失败：您已选择该课程，请勿重复选择");
+            }
+            return AjaxResult.error("选课失败，请稍后重试");
+        }
     }
 
     /**
@@ -384,5 +409,48 @@ public class EduStudentCourseServiceImpl implements IEduStudentCourseService
     public java.util.List<java.util.Map<String, Object>> selectTermGpaList(Long studentId)
     {
         return eduStudentCourseMapper.selectTermGpaList(studentId);
+    }
+
+    /**
+     * 查询挂科学生列表（用于补考成绩录入）
+     */
+    @Override
+    public java.util.List<EduStudentCourse> selectFailedStudentsByOpenId(Long openId)
+    {
+        return eduStudentCourseMapper.selectFailedStudentsByOpenId(openId);
+    }
+
+    /**
+     * 录入补考成绩（只能录入一次）
+     */
+    @Override
+    public AjaxResult submitMakeupScore(EduStudentCourse eduStudentCourse)
+    {
+        // 先查询原记录
+        EduStudentCourse original = eduStudentCourseMapper.selectEduStudentCourseByScId(eduStudentCourse.getScId());
+        if (original == null)
+        {
+            return AjaxResult.error("选课记录不存在");
+        }
+        
+        // 检查原成绩是否不及格
+        if (original.getScore() == null || original.getScore().doubleValue() >= 60)
+        {
+            return AjaxResult.error("该学生初考成绩及格，无需补考");
+        }
+        
+        // 检查是否已经录入过补考成绩
+        if (original.getMakeupScore() != null)
+        {
+            return AjaxResult.error("补考成绩已录入，不可重复录入");
+        }
+        
+        // 录入补考成绩
+        int rows = eduStudentCourseMapper.updateMakeupScore(eduStudentCourse);
+        if (rows > 0)
+        {
+            return AjaxResult.success("补考成绩录入成功");
+        }
+        return AjaxResult.error("补考成绩录入失败");
     }
 }

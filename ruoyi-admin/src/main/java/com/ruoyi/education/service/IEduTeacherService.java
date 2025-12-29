@@ -1,7 +1,7 @@
 package com.ruoyi.education.service;
 
 import java.util.List;
-import com.ruoyi.education.domain.EduTeacher;
+import com.ruoyi.system.domain.EduTeacher;
 
 /**
  * 教师信息Service接口

@@ -164,25 +164,46 @@ export default {
   justify-content: center;
   align-items: center;
   height: 100%;
-  background-image: url("../assets/images/login-background.jpg");
+  background-image: url("../assets/images/login-bg.jpg");
   background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  position: relative;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(0, 82, 147, 0.3) 0%, rgba(0, 0, 0, 0.4) 100%);
+    z-index: 0;
+  }
 }
 .title {
   margin: 0px auto 30px auto;
   text-align: center;
-  color: #707070;
+  color: #005293;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: 2px;
 }
 
 .login-form {
-  border-radius: 6px;
-  background: #ffffff;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.95);
   width: 400px;
-  padding: 25px 25px 5px 25px;
+  padding: 40px 35px 20px 35px;
   z-index: 1;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+  
   .el-input {
-    height: 38px;
+    height: 42px;
     input {
-      height: 38px;
+      height: 42px;
+      border-radius: 6px;
     }
   }
   .input-icon {
@@ -203,6 +224,7 @@ export default {
   img {
     cursor: pointer;
     vertical-align: middle;
+    border-radius: 4px;
   }
 }
 .el-login-footer {
@@ -212,10 +234,12 @@ export default {
   bottom: 0;
   width: 100%;
   text-align: center;
-  color: #fff;
+  color: rgba(255, 255, 255, 0.9);
   font-family: Arial;
   font-size: 12px;
   letter-spacing: 1px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  z-index: 1;
 }
 .login-code-img {
   height: 38px;

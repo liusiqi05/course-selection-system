@@ -31,13 +31,16 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         select e.eval_id, e.sc_id, e.student_id, e.open_id, e.teaching_score, e.content_score, 
                e.difficulty_score, e.workload_score, e.overall_score, e.comment, e.is_anonymous, 
                e.eval_time, e.create_time, e.update_time,
-               CASE WHEN e.is_anonymous = '1' THEN '匿名' ELSE s.student_name END as student_name,
-               s.student_no, c.course_name, t.nick_name as teacher_name, tm.term_name
+               CASE WHEN e.is_anonymous = '1' THEN '匿名' ELSE su.nick_name END as student_name,
+               CASE WHEN e.is_anonymous = '1' THEN '******' ELSE su.user_name END as student_no,
+               c.course_name, tu.nick_name as teacher_name, tm.term_name
         from edu_course_evaluation e
         left join edu_student s on e.student_id = s.student_id
+        left join sys_user su on s.user_id = su.user_id
         left join edu_course_opening o on e.open_id = o.open_id
         left join edu_course c on o.course_id = c.course_id
-        left join sys_user t on o.teacher_id = t.user_id
+        left join edu_teacher et on o.teacher_id = et.teacher_id
+        left join sys_user tu on et.user_id = tu.user_id
         left join edu_term tm on o.term_id = tm.term_id
     </sql>
 
@@ -52,12 +55,15 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="studentId != null "> and e.student_id = #{studentId}</if>
             <if test="openId != null "> and e.open_id = #{openId}</if>
             <if test="overallScore != null "> and e.overall_score = #{overallScore}</if>
+            <if test="courseName != null and courseName != ''"> and c.course_name like concat('%', #{courseName}, '%')</if>
+            <if test="teacherName != null and teacherName != ''"> and t.nick_name like concat('%', #{teacherName}, '%')</if>
+            <if test="termId != null"> and tm.term_id = #{termId}</if>
         </where>
         order by e.eval_time desc
     </select>
 
     <select id="selectEvaluationStats" parameterType="Long" resultMap="EduCourseEvaluationResult">
-        select o.open_id, c.course_name, t.nick_name as teacher_name, tm.term_name,
+        select o.open_id, c.course_name, tu.nick_name as teacher_name, tm.term_name,
                AVG(e.teaching_score) as teaching_score,
                AVG(e.content_score) as content_score,
                AVG(e.difficulty_score) as difficulty_score,
@@ -68,10 +74,11 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         from edu_course_opening o
         left join edu_course_evaluation e on o.open_id = e.open_id
         left join edu_course c on o.course_id = c.course_id
-        left join sys_user t on o.teacher_id = t.user_id
+        left join edu_teacher et on o.teacher_id = et.teacher_id
+        left join sys_user tu on et.user_id = tu.user_id
         left join edu_term tm on o.term_id = tm.term_id
         where o.open_id = #{openId}
-        group by o.open_id, c.course_name, t.nick_name, tm.term_name
+        group by o.open_id, c.course_name, tu.nick_name, tm.term_name
     </select>
 
     <select id="selectByStudentAndOpen" resultMap="EduCourseEvaluationResult">
@@ -136,4 +143,45 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             #{evalId}
         </foreach>
     </delete>
+
+    <!-- 查询教师的课程评价列表 -->
+    <select id="selectEvaluationByTeacherId" parameterType="Long" resultMap="EduCourseEvaluationResult">
+        select e.eval_id, e.sc_id, e.student_id, e.open_id, e.teaching_score, e.content_score, 
+               e.difficulty_score, e.workload_score, e.overall_score, e.comment, e.is_anonymous, 
+               e.eval_time, e.create_time, e.update_time,
+               CASE WHEN e.is_anonymous = '1' THEN '匿名学生' ELSE su.nick_name END as student_name,
+               CASE WHEN e.is_anonymous = '1' THEN '******' ELSE su.user_name END as student_no,
+               c.course_name, u.nick_name as teacher_name, tm.term_name
+        from edu_course_evaluation e
+        left join edu_student s on e.student_id = s.student_id
+        left join sys_user su on s.user_id = su.user_id
+        left join edu_course_opening o on e.open_id = o.open_id
+        left join edu_course c on o.course_id = c.course_id
+        left join edu_teacher t on o.teacher_id = t.teacher_id
+        left join sys_user u on t.user_id = u.user_id
+        left join edu_term tm on o.term_id = tm.term_id
+        where t.teacher_id = #{teacherId}
+        order by e.eval_time desc
+    </select>
+
+    <!-- 查询教师课程的评价统计汇总 -->
+    <select id="selectEvaluationStatsByTeacherId" parameterType="Long" resultMap="EduCourseEvaluationResult">
+        select o.open_id, c.course_name, u.nick_name as teacher_name, tm.term_name,
+               ROUND(AVG(e.teaching_score), 1) as teaching_score,
+               ROUND(AVG(e.content_score), 1) as content_score,
+               ROUND(AVG(e.difficulty_score), 1) as difficulty_score,
+               ROUND(AVG(e.workload_score), 1) as workload_score,
+               ROUND(AVG(e.overall_score), 1) as overall_score,
+               ROUND(AVG((e.teaching_score + e.content_score + e.difficulty_score + e.workload_score + e.overall_score) / 5.0), 2) as avg_score,
+               COUNT(e.eval_id) as eval_id
+        from edu_course_opening o
+        left join edu_course_evaluation e on o.open_id = e.open_id
+        left join edu_course c on o.course_id = c.course_id
+        left join edu_teacher t on o.teacher_id = t.teacher_id
+        left join sys_user u on t.user_id = u.user_id
+        left join edu_term tm on o.term_id = tm.term_id
+        where t.teacher_id = #{teacherId}
+        group by o.open_id, c.course_name, u.nick_name, tm.term_name
+        order by tm.term_name desc, c.course_name
+    </select>
 </mapper>

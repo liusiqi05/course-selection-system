@@ -1,51 +1,43 @@
-package com.ruoyi.education.domain;
+package com.ruoyi.system.domain;
 
-import java.util.Date;
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.ruoyi.common.annotation.Excel;
 import com.ruoyi.common.core.domain.BaseEntity;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 
 /**
- * 学生信息对象 edu_student
+ * 教师信息对象 edu_teacher
  * 
  * @author ruoyi
  * @date 2025-12-18
  */
-public class EduStudent extends BaseEntity
+public class EduTeacher extends BaseEntity
 {
     private static final long serialVersionUID = 1L;
 
-    /** 学生ID */
-    private Long studentId;
+    /** 教师ID */
+    private Long teacherId;
 
     /** 关联系统用户ID */
     @Excel(name = "用户ID")
     private Long userId;
 
-    /** 班级名称 */
-    @Excel(name = "班级名称")
-    private String className;
+    /** 职称 */
+    @Excel(name = "职称")
+    private String title;
 
-    /** 入学日期 */
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    @Excel(name = "入学日期", width = 30, dateFormat = "yyyy-MM-dd")
-    private Date enrollmentDate;
+    /** 学历 */
+    @Excel(name = "学历")
+    private String education;
 
-    /** 预计毕业日期 */
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    @Excel(name = "预计毕业日期", width = 30, dateFormat = "yyyy-MM-dd")
-    private Date expectedGraduation;
-
-    /** 学籍状态 (0在读 1毕业 2休学 3退学) */
-    @Excel(name = "学籍状态", readConverterExp = "0=在读,1=毕业,2=休学,3=退学")
-    private String studentStatus;
+    /** 研究方向 */
+    @Excel(name = "研究方向")
+    private String researchArea;
 
     // ========== 关联字段（来自 sys_user）==========
-    /** 学号 */
-    @Excel(name = "学号")
-    private String studentNo;
+    /** 工号 */
+    @Excel(name = "工号")
+    private String teacherNo;
 
     /** 姓名 */
     @Excel(name = "姓名")
@@ -62,14 +54,6 @@ public class EduStudent extends BaseEntity
     @Excel(name = "学院")
     private String deptName;
 
-    /** 专业 */
-    @Excel(name = "专业")
-    private String major;
-
-    /** 年级 */
-    @Excel(name = "年级")
-    private String grade;
-
     /** 手机号 */
     @Excel(name = "手机号")
     private String phonenumber;
@@ -83,12 +67,12 @@ public class EduStudent extends BaseEntity
 
     // ========== Getter & Setter ==========
 
-    public Long getStudentId() {
-        return studentId;
+    public Long getTeacherId() {
+        return teacherId;
     }
 
-    public void setStudentId(Long studentId) {
-        this.studentId = studentId;
+    public void setTeacherId(Long teacherId) {
+        this.teacherId = teacherId;
     }
 
     public Long getUserId() {
@@ -99,44 +83,36 @@ public class EduStudent extends BaseEntity
         this.userId = userId;
     }
 
-    public String getClassName() {
-        return className;
+    public String getTitle() {
+        return title;
     }
 
-    public void setClassName(String className) {
-        this.className = className;
+    public void setTitle(String title) {
+        this.title = title;
     }
 
-    public Date getEnrollmentDate() {
-        return enrollmentDate;
+    public String getEducation() {
+        return education;
     }
 
-    public void setEnrollmentDate(Date enrollmentDate) {
-        this.enrollmentDate = enrollmentDate;
+    public void setEducation(String education) {
+        this.education = education;
     }
 
-    public Date getExpectedGraduation() {
-        return expectedGraduation;
+    public String getResearchArea() {
+        return researchArea;
     }
 
-    public void setExpectedGraduation(Date expectedGraduation) {
-        this.expectedGraduation = expectedGraduation;
+    public void setResearchArea(String researchArea) {
+        this.researchArea = researchArea;
     }
 
-    public String getStudentStatus() {
-        return studentStatus;
+    public String getTeacherNo() {
+        return teacherNo;
     }
 
-    public void setStudentStatus(String studentStatus) {
-        this.studentStatus = studentStatus;
-    }
-
-    public String getStudentNo() {
-        return studentNo;
-    }
-
-    public void setStudentNo(String studentNo) {
-        this.studentNo = studentNo;
+    public void setTeacherNo(String teacherNo) {
+        this.teacherNo = teacherNo;
     }
 
     public String getNickName() {
@@ -171,22 +147,6 @@ public class EduStudent extends BaseEntity
         this.deptName = deptName;
     }
 
-    public String getMajor() {
-        return major;
-    }
-
-    public void setMajor(String major) {
-        this.major = major;
-    }
-
-    public String getGrade() {
-        return grade;
-    }
-
-    public void setGrade(String grade) {
-        this.grade = grade;
-    }
-
     public String getPhonenumber() {
         return phonenumber;
     }
@@ -214,13 +174,12 @@ public class EduStudent extends BaseEntity
     @Override
     public String toString() {
         return new ToStringBuilder(this, ToStringStyle.MULTI_LINE_STYLE)
-            .append("studentId", getStudentId())
+            .append("teacherId", getTeacherId())
             .append("userId", getUserId())
-            .append("className", getClassName())
-            .append("enrollmentDate", getEnrollmentDate())
-            .append("expectedGraduation", getExpectedGraduation())
-            .append("studentStatus", getStudentStatus())
-            .append("studentNo", getStudentNo())
+            .append("title", getTitle())
+            .append("education", getEducation())
+            .append("researchArea", getResearchArea())
+            .append("teacherNo", getTeacherNo())
             .append("nickName", getNickName())
             .append("createBy", getCreateBy())
             .append("createTime", getCreateTime())

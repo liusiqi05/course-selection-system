@@ -33,8 +33,8 @@
       </el-form-item>
       <el-form-item label="状态" prop="status">
         <el-select v-model="queryParams.status" placeholder="请选择状态" clearable>
-          <el-option label="正常" value="0" />
-          <el-option label="停用" value="1" />
+          <el-option label="可选" value="0" />
+          <el-option label="已结课" value="1" />
         </el-select>
       </el-form-item>
       <el-form-item>
@@ -107,8 +107,8 @@
       </el-table-column>
       <el-table-column label="状态" align="center" prop="status" width="80">
         <template slot-scope="scope">
-          <el-tag :type="scope.row.status === '0' ? 'success' : 'danger'">
-            {{ scope.row.status === '0' ? '可选' : '停用' }}
+          <el-tag :type="scope.row.status === '0' ? 'success' : 'info'">
+            {{ scope.row.status === '0' ? '可选' : '已结课' }}
           </el-tag>
         </template>
       </el-table-column>
@@ -211,7 +211,7 @@
             <el-form-item label="状态" prop="status">
               <el-radio-group v-model="form.status">
                 <el-radio label="0">可选</el-radio>
-                <el-radio label="1">停用</el-radio>
+                <el-radio label="1">已结课</el-radio>
               </el-radio-group>
             </el-form-item>
           </el-col>

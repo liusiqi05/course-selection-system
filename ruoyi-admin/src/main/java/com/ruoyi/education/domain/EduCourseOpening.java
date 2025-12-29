@@ -1,5 +1,7 @@
 package com.ruoyi.education.domain;
 
+import java.util.Date;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.ruoyi.common.annotation.Excel;
 import com.ruoyi.common.core.domain.BaseEntity;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -72,6 +74,27 @@ public class EduCourseOpening extends BaseEntity
 
     /** 待打分人数（非数据库字段，用于查询） */
     private Integer pendingCount;
+
+    /** 成绩录入截止日期 */
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    @Excel(name = "成绩录入截止日期", width = 30, dateFormat = "yyyy-MM-dd")
+    private Date scoreDeadline;
+
+    /** 是否结课（0未结课 1已结课） */
+    @Excel(name = "是否结课", readConverterExp = "0=未结课,1=已结课")
+    private String isFinished;
+
+    /** 结课时间 */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private Date finishTime;
+
+    /** 平时成绩占比（默认0.40即40%） */
+    @Excel(name = "平时成绩占比")
+    private java.math.BigDecimal usualRatio;
+
+    /** 期末成绩占比（默认0.60即60%） */
+    @Excel(name = "期末成绩占比")
+    private java.math.BigDecimal examRatio;
 
     public void setOpenId(Long openId) 
     {
@@ -223,6 +246,56 @@ public class EduCourseOpening extends BaseEntity
         return pendingCount;
     }
 
+    public void setScoreDeadline(Date scoreDeadline) 
+    {
+        this.scoreDeadline = scoreDeadline;
+    }
+
+    public Date getScoreDeadline() 
+    {
+        return scoreDeadline;
+    }
+
+    public void setIsFinished(String isFinished) 
+    {
+        this.isFinished = isFinished;
+    }
+
+    public String getIsFinished() 
+    {
+        return isFinished;
+    }
+
+    public void setFinishTime(Date finishTime) 
+    {
+        this.finishTime = finishTime;
+    }
+
+    public Date getFinishTime() 
+    {
+        return finishTime;
+    }
+
+    public void setUsualRatio(java.math.BigDecimal usualRatio) 
+    {
+        this.usualRatio = usualRatio;
+    }
+
+    public java.math.BigDecimal getUsualRatio() 
+    {
+        return usualRatio;
+    }
+
+    public void setExamRatio(java.math.BigDecimal examRatio) 
+    {
+        this.examRatio = examRatio;
+    }
+
+    public java.math.BigDecimal getExamRatio() 
+    {
+        return examRatio;
+    }
+
     @Override
     public String toString() {
         return new ToStringBuilder(this, ToStringStyle.MULTI_LINE_STYLE)
@@ -238,6 +311,8 @@ public class EduCourseOpening extends BaseEntity
             .append("maxStudents", getMaxStudents())
             .append("selectedNum", getSelectedNum())
             .append("status", getStatus())
+            .append("pendingCount", getPendingCount())
+            .append("scoreDeadline", getScoreDeadline())
             .append("createBy", getCreateBy())
             .append("createTime", getCreateTime())
             .append("updateBy", getUpdateBy())

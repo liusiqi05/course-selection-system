@@ -2,9 +2,9 @@
 <!DOCTYPE mapper
 PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.ruoyi.education.mapper.EduStudentMapper">
+<mapper namespace="com.ruoyi.system.mapper.EduStudentMapper">
     
-    <resultMap type="com.ruoyi.education.domain.EduStudent" id="EduStudentResult">
+    <resultMap type="com.ruoyi.system.domain.EduStudent" id="EduStudentResult">
         <result property="studentId"          column="student_id"          />
         <result property="userId"             column="user_id"             />
         <result property="className"          column="class_name"          />
@@ -40,7 +40,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         left join sys_dept d on u.dept_id = d.dept_id
     </sql>
 
-    <select id="selectEduStudentList" parameterType="com.ruoyi.education.domain.EduStudent" resultMap="EduStudentResult">
+    <select id="selectEduStudentList" parameterType="com.ruoyi.system.domain.EduStudent" resultMap="EduStudentResult">
         <include refid="selectEduStudentVo"/>
         <where>
             u.del_flag = '0'
@@ -65,7 +65,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         where s.user_id = #{userId}
     </select>
         
-    <insert id="insertEduStudent" parameterType="com.ruoyi.education.domain.EduStudent" useGeneratedKeys="true" keyProperty="studentId">
+    <insert id="insertEduStudent" parameterType="com.ruoyi.system.domain.EduStudent" useGeneratedKeys="true" keyProperty="studentId">
         insert into edu_student
         <trim prefix="(" suffix=")" suffixOverrides=",">
             <if test="userId != null">user_id,</if>
@@ -89,7 +89,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         </trim>
     </insert>
 
-    <update id="updateEduStudent" parameterType="com.ruoyi.education.domain.EduStudent">
+    <update id="updateEduStudent" parameterType="com.ruoyi.system.domain.EduStudent">
         update edu_student
         <trim prefix="SET" suffixOverrides=",">
             <if test="className != null">class_name = #{className},</if>
@@ -117,4 +117,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <delete id="deleteEduStudentByUserId" parameterType="Long">
         delete from edu_student where user_id = #{userId}
     </delete>
+
+    <select id="selectStudentCount" resultType="int">
+        select count(*) from edu_student
+    </select>
 </mapper>

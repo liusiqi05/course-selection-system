@@ -74,4 +74,43 @@ public interface IEduCourseOpeningService
      * @return 课程列表
      */
     public List<EduCourseOpening> selectPendingScoreCourses(Long teacherId);
+
+    /**
+     * 查询教师课程列表（包含待录入人数）
+     * 
+     * @param eduCourseOpening 开课安排
+     * @return 课程列表
+     */
+    public List<EduCourseOpening> selectTeacherCoursesWithPending(EduCourseOpening eduCourseOpening);
+
+    /**
+     * 查询学期所有课程（包含待录入人数，管理员用）
+     * 
+     * @param termId 学期ID
+     * @return 课程列表
+     */
+    public List<EduCourseOpening> selectTermCoursesWithPending(Long termId);
+
+    /**
+     * 结课操作
+     * 
+     * @param openId 开课ID
+     * @return 结果
+     */
+    public int finishCourse(Long openId);
+
+    /**
+     * 取消结课
+     * 
+     * @param openId 开课ID
+     * @return 结果
+     */
+    public int cancelFinishCourse(Long openId);
+
+    /**
+     * 调用存储过程重新计算课程的所有学生成绩（占比变更时保持数据一致性）
+     * 
+     * @param openId 开课ID
+     */
+    public void recalcCourseScores(Long openId);
 }

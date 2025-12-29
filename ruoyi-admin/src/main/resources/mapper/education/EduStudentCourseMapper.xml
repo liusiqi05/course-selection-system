@@ -9,6 +9,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="studentId"     column="student_id"     />
         <result property="studentNo"     column="student_no"     />
         <result property="studentName"   column="student_name"   />
+        <result property="className"     column="class_name"     />
         <result property="openId"        column="open_id"        />
         <result property="courseName"    column="course_name"    />
         <result property="courseCode"    column="course_code"    />
@@ -19,6 +20,10 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="score"         column="score"          />
         <result property="usualScore"    column="usual_score"    />
         <result property="examScore"     column="exam_score"     />
+        <result property="makeupScore"   column="makeup_score"   />
+        <result property="makeupTime"    column="makeup_time"    />
+        <result property="needRetake"    column="need_retake"    />
+        <result property="finalScore"    column="final_score"    />
         <result property="enrollTime"    column="enroll_time"    />
         <result property="status"        column="status"         />
         <result property="isEvaluated"   column="is_evaluated"   />
@@ -33,9 +38,16 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </resultMap>
 
     <sql id="selectEduStudentCourseVo">
-        select sc.sc_id, sc.student_id, sc.open_id, sc.score, sc.usual_score, sc.exam_score, sc.enroll_time, sc.status,
+        select sc.sc_id, sc.student_id, sc.open_id, sc.score, sc.usual_score, sc.exam_score, 
+               sc.makeup_score, sc.makeup_time, sc.need_retake,
+               CASE 
+                   WHEN sc.score >= 60 THEN sc.score
+                   WHEN sc.makeup_score >= 60 THEN 60
+                   ELSE COALESCE(sc.makeup_score, sc.score)
+               END as final_score,
+               sc.enroll_time, sc.status,
                sc.is_evaluated, sc.create_by, sc.create_time, sc.update_by, sc.update_time, sc.remark,
-               su.student_id as student_no, su.nick_name as student_name,
+               su.user_name as student_no, su.nick_name as student_name, s.class_name,
                c.course_code, c.course_name, c.credit,
                t.term_id, t.term_name,
                o.status as course_status, o.class_time, o.class_location,
@@ -84,7 +96,25 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 
     <select id="checkSelected" resultMap="EduStudentCourseResult">
         <include refid="selectEduStudentCourseVo"/>
-        where sc.student_id = #{studentId} and sc.open_id = #{openId} and sc.status = '0'
+        where sc.student_id = #{studentId} and sc.open_id = #{openId}
+    </select>
+
+    <select id="checkSameCourseSelected" resultMap="EduStudentCourseResult">
+        <include refid="selectEduStudentCourseVo"/>
+        where sc.student_id = #{studentId} 
+          and sc.status = '0'
+          and o.term_id = #{termId}
+          and c.course_name = #{courseName}
+    </select>
+
+    <select id="selectSelectedCourseNames" resultType="String">
+        select distinct c.course_name
+        from edu_student_course sc
+        left join edu_course_opening o on sc.open_id = o.open_id
+        left join edu_course c on o.course_id = c.course_id
+        where sc.student_id = #{studentId} 
+          and sc.status = '0'
+          and o.term_id = #{termId}
     </select>
 
     <select id="selectMyScoreList" resultMap="EduStudentCourseResult">
@@ -95,12 +125,24 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
           and o.term_id = #{termId}
         </if>
         <if test="scoreType != null and scoreType == 'pass'">
-          and sc.score &gt;= 60
+          and (sc.score &gt;= 60 OR (sc.makeup_score is not null AND sc.makeup_score &gt;= 60))
         </if>
         <if test="scoreType != null and scoreType == 'fail'">
-          and sc.score &lt; 60
+          and sc.score &lt; 60 AND (sc.makeup_score is null OR sc.makeup_score &lt; 60)
+        </if>
+        <if test="scoreType != null and scoreType == 'retake'">
+          and sc.need_retake = '1'
         </if>
         order by o.term_id desc, sc.sc_id desc
+    </select>
+
+    <!-- 查询挂科学生列表（用于补考成绩录入） -->
+    <select id="selectFailedStudentsByOpenId" parameterType="Long" resultMap="EduStudentCourseResult">
+        <include refid="selectEduStudentCourseVo"/>
+        where sc.open_id = #{openId}
+          and sc.score is not null
+          and sc.score &lt; 60
+        order by su.user_name
     </select>
         
     <insert id="insertEduStudentCourse" parameterType="com.ruoyi.education.domain.EduStudentCourse" useGeneratedKeys="true" keyProperty="scId">
@@ -137,6 +179,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="score != null">score = #{score},</if>
             <if test="usualScore != null">usual_score = #{usualScore},</if>
             <if test="examScore != null">exam_score = #{examScore},</if>
+            <if test="makeupScore != null">makeup_score = #{makeupScore},</if>
+            <if test="makeupTime != null">makeup_time = #{makeupTime},</if>
+            <if test="needRetake != null">need_retake = #{needRetake},</if>
             <if test="status != null">status = #{status},</if>
             <if test="isEvaluated != null">is_evaluated = #{isEvaluated},</if>
             <if test="updateBy != null">update_by = #{updateBy},</if>
@@ -144,6 +189,19 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             update_time = sysdate()
         </trim>
         where sc_id = #{scId}
+    </update>
+
+    <!-- 录入补考成绩 -->
+    <update id="updateMakeupScore" parameterType="com.ruoyi.education.domain.EduStudentCourse">
+        update edu_student_course
+        set makeup_score = #{makeupScore},
+            makeup_time = sysdate(),
+            need_retake = CASE WHEN #{makeupScore} &lt; 60 THEN '1' ELSE '0' END,
+            update_by = #{updateBy},
+            update_time = sysdate()
+        where sc_id = #{scId} 
+          and score &lt; 60 
+          and makeup_score is null
     </update>
 
     <update id="withdrawCourse">
@@ -162,7 +220,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         </foreach>
     </delete>
 
-    <!-- 查询待评价的课程列表（已结课但未评价） -->
+    <!-- 查询待评价的课程列表（已结课但未评价，status='1'表示已结课） -->
     <select id="selectPendingEvaluations" parameterType="Long" resultType="com.ruoyi.education.domain.EduCourseEvaluation">
         select sc.sc_id as scId, sc.open_id as openId, sc.student_id as studentId,
                c.course_name as courseName, tu.nick_name as teacherName, t.term_name as termName,
@@ -171,7 +229,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         left join edu_course_opening o on sc.open_id = o.open_id
         left join edu_course c on o.course_id = c.course_id
         left join edu_term t on o.term_id = t.term_id
-        left join sys_user tu on o.teacher_id = tu.user_id
+        left join edu_teacher et on o.teacher_id = et.teacher_id
+        left join sys_user tu on et.user_id = tu.user_id
         where sc.student_id = #{studentId}
           and sc.status = '0'
           and o.status = '1'
@@ -179,7 +238,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         order by t.term_id desc
     </select>
 
-    <!-- 计算GPA统计 -->
+    <!-- 计算GPA统计（补考通过按60分计算） -->
     <select id="selectGpaStats" resultType="java.util.Map">
         select 
             COUNT(*) as courseCount,
@@ -195,10 +254,12 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
                     WHEN sc.score >= 68 THEN 2.0
                     WHEN sc.score >= 64 THEN 1.5
                     WHEN sc.score >= 60 THEN 1.0
+                    WHEN sc.makeup_score >= 60 THEN 1.0
                     ELSE 0
                 END) as weightedGpa,
-            SUM(CASE WHEN sc.score >= 60 THEN 1 ELSE 0 END) as passCount,
-            SUM(CASE WHEN sc.score &lt; 60 THEN 1 ELSE 0 END) as failCount
+            SUM(CASE WHEN sc.score >= 60 OR sc.makeup_score >= 60 THEN 1 ELSE 0 END) as passCount,
+            SUM(CASE WHEN sc.score &lt; 60 AND (sc.makeup_score is null OR sc.makeup_score &lt; 60) THEN 1 ELSE 0 END) as failCount,
+            SUM(CASE WHEN sc.need_retake = '1' THEN 1 ELSE 0 END) as retakeCount
         from edu_student_course sc
         left join edu_course_opening o on sc.open_id = o.open_id
         left join edu_course c on o.course_id = c.course_id
@@ -209,7 +270,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         </if>
     </select>
 
-    <!-- 查询各学期的GPA列表 -->
+    <!-- 查询各学期的GPA列表（补考通过按60分计算） -->
     <select id="selectTermGpaList" parameterType="Long" resultType="java.util.Map">
         select 
             t.term_id as termId,
@@ -227,10 +288,12 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
                     WHEN sc.score >= 68 THEN 2.0
                     WHEN sc.score >= 64 THEN 1.5
                     WHEN sc.score >= 60 THEN 1.0
+                    WHEN sc.makeup_score >= 60 THEN 1.0
                     ELSE 0
                 END) / SUM(CAST(c.credit AS DECIMAL(5,2))), 2) as gpa,
-            SUM(CASE WHEN sc.score >= 60 THEN 1 ELSE 0 END) as passCount,
-            SUM(CASE WHEN sc.score &lt; 60 THEN 1 ELSE 0 END) as failCount
+            SUM(CASE WHEN sc.score >= 60 OR sc.makeup_score >= 60 THEN 1 ELSE 0 END) as passCount,
+            SUM(CASE WHEN sc.score &lt; 60 AND (sc.makeup_score is null OR sc.makeup_score &lt; 60) THEN 1 ELSE 0 END) as failCount,
+            SUM(CASE WHEN sc.need_retake = '1' THEN 1 ELSE 0 END) as retakeCount
         from edu_student_course sc
         left join edu_course_opening o on sc.open_id = o.open_id
         left join edu_course c on o.course_id = c.course_id

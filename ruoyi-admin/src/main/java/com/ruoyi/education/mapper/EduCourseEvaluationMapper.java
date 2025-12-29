@@ -76,4 +76,20 @@ public interface EduCourseEvaluationMapper
      * @return 结果
      */
     public int deleteEduCourseEvaluationByEvalIds(Long[] evalIds);
+
+    /**
+     * 查询教师的课程评价列表
+     * 
+     * @param teacherId 教师ID
+     * @return 评价列表
+     */
+    public List<EduCourseEvaluation> selectEvaluationByTeacherId(Long teacherId);
+
+    /**
+     * 查询教师课程的评价统计汇总
+     * 
+     * @param teacherId 教师ID
+     * @return 评价统计列表
+     */
+    public List<EduCourseEvaluation> selectEvaluationStatsByTeacherId(Long teacherId);
 }

@@ -18,8 +18,8 @@ import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.enums.BusinessType;
 import com.ruoyi.common.utils.SecurityUtils;
-import com.ruoyi.education.domain.EduStudent;
-import com.ruoyi.education.domain.EduTeacher;
+import com.ruoyi.system.domain.EduStudent;
+import com.ruoyi.system.domain.EduTeacher;
 import com.ruoyi.education.domain.EduCourseOpening;
 import com.ruoyi.education.domain.EduStudentCourse;
 import com.ruoyi.education.service.IEduStudentService;
@@ -74,7 +74,7 @@ public class EduStudentCourseController extends BaseController
         EduStudent student = eduStudentService.selectEduStudentByUserId(userId);
         if (student == null)
         {
-            return getDataTable(null);
+            return getDataTable(Collections.emptyList());
         }
         startPage();
         EduStudentCourse query = new EduStudentCourse();
@@ -249,6 +249,13 @@ public class EduStudentCourseController extends BaseController
         {
             return error("选课记录不存在");
         }
+        
+        // 检查是否已经提交过成绩，防止重复提交
+        if (existing.getScore() != null)
+        {
+            return error("该学生的成绩已经提交，无法修改");
+        }
+        
         // 验证是否是自己的课程
         EduCourseOpening opening = eduCourseOpeningService.selectEduCourseOpeningByOpenId(existing.getOpenId());
         if (opening == null || !opening.getTeacherId().equals(teacher.getTeacherId()))
@@ -269,7 +276,15 @@ public class EduStudentCourseController extends BaseController
             // 设置状态为已修读
             updateObj.setStatus("1");
         }
-        return toAjax(eduStudentCourseService.updateEduStudentCourse(updateObj));
+        int result = eduStudentCourseService.updateEduStudentCourse(updateObj);
+        
+        // 更新课程状态：检查该课程是否所有学生都已录入成绩
+        if (result > 0)
+        {
+            updateCourseStatusIfAllScored(opening.getOpenId());
+        }
+        
+        return toAjax(result);
     }
 
     /**
@@ -286,13 +301,25 @@ public class EduStudentCourseController extends BaseController
         {
             return error("您不是教师，无法操作");
         }
+        
+        Long openIdToUpdate = null;
         int successCount = 0;
+        
         for (EduStudentCourse sc : list)
         {
             EduStudentCourse existing = eduStudentCourseService.selectEduStudentCourseByScId(sc.getScId());
             if (existing == null) continue;
+            
+            // 检查是否已经提交过成绩
+            if (existing.getScore() != null)
+            {
+                continue; // 已提交则跳过
+            }
+            
             EduCourseOpening opening = eduCourseOpeningService.selectEduCourseOpeningByOpenId(existing.getOpenId());
             if (opening == null || !opening.getTeacherId().equals(teacher.getTeacherId())) continue;
+            
+            openIdToUpdate = existing.getOpenId();
             
             EduStudentCourse updateObj = new EduStudentCourse();
             updateObj.setScId(sc.getScId());
@@ -309,6 +336,13 @@ public class EduStudentCourseController extends BaseController
             eduStudentCourseService.updateEduStudentCourse(updateObj);
             successCount++;
         }
+        
+        // 检查并更新课程状态
+        if (successCount > 0 && openIdToUpdate != null)
+        {
+            updateCourseStatusIfAllScored(openIdToUpdate);
+        }
+        
         return success("成功录入 " + successCount + " 条成绩");
     }
 
@@ -340,5 +374,232 @@ public class EduStudentCourseController extends BaseController
             return error("学生信息不存在");
         }
         return success(eduStudentCourseService.selectTermGpaList(student.getStudentId()));
+    }
+    
+    /**
+     * 检查课程是否所有学生都已录入成绩，如果是则自动更新课程状态
+     */
+    private void updateCourseStatusIfAllScored(Long openId)
+    {
+        try
+        {
+            EduCourseOpening opening = eduCourseOpeningService.selectEduCourseOpeningByOpenId(openId);
+            if (opening == null || "1".equals(opening.getStatus()))
+            {
+                return; // 课程不存在或已结课
+            }
+            
+            // 查询该课程所有学生
+            EduStudentCourse query = new EduStudentCourse();
+            query.setOpenId(openId);
+            List<EduStudentCourse> courseStudents = eduStudentCourseService.selectEduStudentCourseList(query);
+            
+            if (courseStudents.isEmpty())
+            {
+                return; // 没有学生
+            }
+            
+            // 检查是否所有学生都有成绩
+            boolean allScored = courseStudents.stream().allMatch(s -> s.getScore() != null);
+            
+            if (allScored)
+            {
+                // 更新课程状态为已结课
+                EduCourseOpening update = new EduCourseOpening();
+                update.setOpenId(openId);
+                update.setStatus("1");
+                update.setPendingCount(0);
+                eduCourseOpeningService.updateEduCourseOpening(update);
+            }
+        }
+        catch (Exception e)
+        {
+            // 记录异常但不影响成绩保存
+            logger.error("更新课程状态失败", e);
+        }
+    }
+
+    /**
+     * 管理员修改学生成绩（可以修改已提交的成绩）
+     */
+    @PreAuthorize("@ss.hasAnyRoles('admin,leader')")
+    @Log(title = "管理员修改成绩", businessType = BusinessType.UPDATE)
+    @PutMapping("/adminInputScore")
+    public AjaxResult adminInputScore(@RequestBody EduStudentCourse eduStudentCourse)
+    {
+        // 获取选课记录
+        EduStudentCourse existing = eduStudentCourseService.selectEduStudentCourseByScId(eduStudentCourse.getScId());
+        if (existing == null)
+        {
+            return error("选课记录不存在");
+        }
+        
+        // 计算总成绩：平时成绩 * 40% + 考试成绩 * 60%
+        EduStudentCourse updateObj = new EduStudentCourse();
+        updateObj.setScId(eduStudentCourse.getScId());
+        updateObj.setUsualScore(eduStudentCourse.getUsualScore());
+        updateObj.setExamScore(eduStudentCourse.getExamScore());
+        if (eduStudentCourse.getUsualScore() != null && eduStudentCourse.getExamScore() != null)
+        {
+            java.math.BigDecimal totalScore = eduStudentCourse.getUsualScore()
+                .multiply(new java.math.BigDecimal("0.4"))
+                .add(eduStudentCourse.getExamScore().multiply(new java.math.BigDecimal("0.6")));
+            updateObj.setScore(totalScore.setScale(1, java.math.RoundingMode.HALF_UP));
+            updateObj.setStatus("1");
+        }
+        int result = eduStudentCourseService.updateEduStudentCourse(updateObj);
+        return toAjax(result);
+    }
+
+    /**
+     * 导出某门课程的学生名单
+     */
+    @PreAuthorize("@ss.hasPermi('education:teacherStudent:list')")
+    @Log(title = "导出学生名单", businessType = BusinessType.EXPORT)
+    @PostMapping("/exportStudents/{openId}")
+    public void exportStudents(HttpServletResponse response, @PathVariable("openId") Long openId)
+    {
+        // 获取当前登录用户
+        Long userId = SecurityUtils.getUserId();
+        EduTeacher teacher = eduTeacherService.selectEduTeacherByUserId(userId);
+        
+        // 验证权限：管理员或课程教师
+        boolean isAdmin = SecurityUtils.getLoginUser().getUser().isAdmin();
+        if (!isAdmin && teacher != null)
+        {
+            EduCourseOpening opening = eduCourseOpeningService.selectEduCourseOpeningByOpenId(openId);
+            if (opening == null || !opening.getTeacherId().equals(teacher.getTeacherId()))
+            {
+                return; // 无权导出
+            }
+        }
+        
+        List<EduStudentCourse> list = eduStudentCourseService.selectStudentsByOpenId(openId);
+        ExcelUtil<EduStudentCourse> util = new ExcelUtil<EduStudentCourse>(EduStudentCourse.class);
+        util.exportExcel(response, list, "学生名单");
+    }
+
+    /**
+     * 查询某门课程的挂科学生列表（用于补考成绩录入）
+     */
+    @PreAuthorize("@ss.hasPermi('education:score:edit')")
+    @GetMapping("/failedStudents/{openId}")
+    public TableDataInfo failedStudents(@PathVariable("openId") Long openId)
+    {
+        // 获取当前登录用户
+        Long userId = SecurityUtils.getUserId();
+        EduTeacher teacher = eduTeacherService.selectEduTeacherByUserId(userId);
+        
+        // 验证权限：管理员或课程教师
+        boolean isAdmin = SecurityUtils.getLoginUser().getUser().isAdmin();
+        if (!isAdmin && teacher != null)
+        {
+            EduCourseOpening opening = eduCourseOpeningService.selectEduCourseOpeningByOpenId(openId);
+            if (opening == null || !opening.getTeacherId().equals(teacher.getTeacherId()))
+            {
+                return getDataTable(Collections.emptyList());
+            }
+        }
+        
+        startPage();
+        List<EduStudentCourse> list = eduStudentCourseService.selectFailedStudentsByOpenId(openId);
+        return getDataTable(list);
+    }
+
+    /**
+     * 教师录入补考成绩（只能录入一次）
+     */
+    @PreAuthorize("@ss.hasPermi('education:score:edit')")
+    @Log(title = "录入补考成绩", businessType = BusinessType.UPDATE)
+    @PutMapping("/inputMakeupScore")
+    public AjaxResult inputMakeupScore(@RequestBody EduStudentCourse eduStudentCourse)
+    {
+        // 获取当前登录用户
+        Long userId = SecurityUtils.getUserId();
+        EduTeacher teacher = eduTeacherService.selectEduTeacherByUserId(userId);
+        if (teacher == null)
+        {
+            return error("您不是教师，无法操作");
+        }
+        // 获取选课记录对应的开课信息
+        EduStudentCourse existing = eduStudentCourseService.selectEduStudentCourseByScId(eduStudentCourse.getScId());
+        if (existing == null)
+        {
+            return error("选课记录不存在");
+        }
+        // 验证是否是自己的课程
+        EduCourseOpening opening = eduCourseOpeningService.selectEduCourseOpeningByOpenId(existing.getOpenId());
+        if (opening == null || !opening.getTeacherId().equals(teacher.getTeacherId()))
+        {
+            return error("无权操作此课程");
+        }
+        
+        eduStudentCourse.setUpdateBy(SecurityUtils.getUsername());
+        return eduStudentCourseService.submitMakeupScore(eduStudentCourse);
+    }
+
+    /**
+     * 批量录入补考成绩
+     */
+    @PreAuthorize("@ss.hasPermi('education:score:edit')")
+    @Log(title = "批量录入补考成绩", businessType = BusinessType.UPDATE)
+    @PutMapping("/batchInputMakeupScore")
+    public AjaxResult batchInputMakeupScore(@RequestBody List<EduStudentCourse> list)
+    {
+        Long userId = SecurityUtils.getUserId();
+        EduTeacher teacher = eduTeacherService.selectEduTeacherByUserId(userId);
+        if (teacher == null)
+        {
+            return error("您不是教师，无法操作");
+        }
+        
+        int successCount = 0;
+        int failCount = 0;
+        StringBuilder failMsg = new StringBuilder();
+        
+        for (EduStudentCourse sc : list)
+        {
+            if (sc.getMakeupScore() == null)
+            {
+                continue;
+            }
+            
+            EduStudentCourse existing = eduStudentCourseService.selectEduStudentCourseByScId(sc.getScId());
+            if (existing == null)
+            {
+                failCount++;
+                continue;
+            }
+            
+            // 验证是否是自己的课程
+            EduCourseOpening opening = eduCourseOpeningService.selectEduCourseOpeningByOpenId(existing.getOpenId());
+            if (opening == null || !opening.getTeacherId().equals(teacher.getTeacherId()))
+            {
+                failCount++;
+                failMsg.append(existing.getStudentName()).append("(无权操作); ");
+                continue;
+            }
+            
+            sc.setUpdateBy(SecurityUtils.getUsername());
+            AjaxResult result = eduStudentCourseService.submitMakeupScore(sc);
+            if (result.isSuccess())
+            {
+                successCount++;
+            }
+            else
+            {
+                failCount++;
+                failMsg.append(existing.getStudentName()).append("(").append(result.get("msg")).append("); ");
+            }
+        }
+        
+        if (failCount == 0)
+        {
+            return success("成功录入" + successCount + "条补考成绩");
+        }
+        else
+        {
+            return success("成功" + successCount + "条，失败" + failCount + "条。" + failMsg.toString());
+        }
     }
 }

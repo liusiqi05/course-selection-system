@@ -1,52 +1,68 @@
 <template>
   <div class="app-container schedule-container">
-    <!-- 学期选择 -->
-    <el-row :gutter="20" class="schedule-header">
-      <el-col :span="8">
-        <el-select v-model="termId" placeholder="选择学期" @change="loadSchedule" style="width: 100%">
-          <el-option
-            v-for="term in termList"
-            :key="term.termId"
-            :label="term.termName"
-            :value="term.termId"
-          />
-        </el-select>
-      </el-col>
-      <el-col :span="16" class="schedule-title">
-        <h2><i class="el-icon-date"></i> 我的授课表</h2>
-      </el-col>
-    </el-row>
+    <!-- 学期选择和标题 -->
+    <el-card class="header-card" shadow="hover">
+      <div class="schedule-header">
+        <div class="header-left">
+          <el-select v-model="termId" placeholder="选择学期" @change="loadSchedule" size="medium">
+            <el-option
+              v-for="term in termList"
+              :key="term.termId"
+              :label="term.termName"
+              :value="term.termId"
+            />
+          </el-select>
+          <el-tag type="success" size="medium" style="margin-left: 15px;" v-if="courseList.length > 0">
+            共 {{ courseList.length }} 门课程
+          </el-tag>
+        </div>
+        <div class="header-center">
+          <h2><i class="el-icon-date"></i> 我的授课表</h2>
+        </div>
+        <div class="header-right">
+          <el-button type="primary" size="small" icon="el-icon-refresh" @click="loadSchedule">刷新</el-button>
+          <el-tooltip content="点击课程卡片查看详情" placement="bottom">
+            <el-button type="info" size="small" icon="el-icon-question" circle></el-button>
+          </el-tooltip>
+        </div>
+      </div>
+    </el-card>
 
-    <!-- 课程表周视图 -->
+    <!-- 课程表周视图 - 优化版 -->
     <div class="schedule-table-wrapper">
       <table class="schedule-table">
         <thead>
           <tr>
-            <th class="time-col">节次</th>
+            <th class="time-col">节次/时间</th>
             <th v-for="day in weekDays" :key="day.key" class="day-col">{{ day.label }}</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="period in periods" :key="period.key">
+          <tr v-for="period in periods" :key="period.num" :class="{ 'period-divider': [2, 4, 6, 8].includes(period.num) }">
             <td class="time-cell">
               <div class="period-num">第{{ period.num }}节</div>
               <div class="period-time">{{ period.time }}</div>
             </td>
-            <td v-for="day in weekDays" :key="day.key + '-' + period.key" class="course-cell">
+            <td v-for="day in weekDays" :key="day.key + '-' + period.num" class="course-cell">
               <div
                 v-if="getCourse(day.key, period.num)"
                 class="course-card"
                 :style="{ backgroundColor: getCourse(day.key, period.num).color }"
                 @click="showCourseDetail(getCourse(day.key, period.num))"
               >
-                <div class="course-name">{{ getCourse(day.key, period.num).courseName }}</div>
+                <div class="course-name" :title="getCourse(day.key, period.num).courseName">
+                  {{ getCourse(day.key, period.num).courseName }}
+                </div>
+                <div class="course-info">
+                  <span class="course-code">{{ getCourse(day.key, period.num).courseCode }}</span>
+                </div>
+                <div class="course-location" :title="getCourse(day.key, period.num).classLocation">
+                  <i class="el-icon-location-outline"></i>
+                  {{ getCourse(day.key, period.num).classLocation }}
+                </div>
                 <div class="course-students">
                   <i class="el-icon-user"></i>
                   {{ getCourse(day.key, period.num).selectedNum }}/{{ getCourse(day.key, period.num).maxStudents }}
-                </div>
-                <div class="course-location">
-                  <i class="el-icon-location-outline"></i>
-                  {{ getCourse(day.key, period.num).classLocation }}
                 </div>
               </div>
             </td>
@@ -172,7 +188,7 @@ export default {
     loadTermList() {
       listTermOptions().then(response => {
         console.log('教师-学期列表响应:', response);
-        this.termList = response.rows || [];
+        this.termList = response.data || [];
         if (this.termList.length > 0) {
           this.termId = this.termList[0].termId;
           console.log('教师-选择学期:', this.termId);
@@ -234,7 +250,7 @@ export default {
     },
     goToStudentList(course) {
       this.dialogVisible = false;
-      this.$router.push({ path: "/education/teacher/students", query: { openId: course.openId } });
+      this.$router.push({ path: "/education/teacher/course", query: { openId: course.openId } });
     }
   }
 };
@@ -242,33 +258,48 @@ export default {
 
 <style scoped>
 .schedule-container {
-  padding: 20px;
+  padding: 15px;
+}
+
+.header-card {
+  margin-bottom: 15px;
 }
 
 .schedule-header {
-  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.header-left {
+  display: flex;
   align-items: center;
 }
 
-.schedule-title h2 {
+.header-center h2 {
   margin: 0;
-  text-align: center;
   color: #303133;
+}
+
+.header-right {
+  display: flex;
+  gap: 10px;
 }
 
 .schedule-table-wrapper {
   overflow-x: auto;
   margin-bottom: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
 }
 
 .schedule-table {
   width: 100%;
+  min-width: 1000px;
   border-collapse: collapse;
   table-layout: fixed;
   background: #fff;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-  overflow: hidden;
 }
 
 .schedule-table th,
@@ -282,62 +313,94 @@ export default {
 .schedule-table th {
   background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
   color: #fff;
-  padding: 15px 10px;
+  padding: 12px 8px;
   font-weight: 500;
+  font-size: 14px;
 }
 
 .time-col {
   width: 100px;
+  min-width: 100px;
 }
 
 .day-col {
-  width: calc((100% - 100px) / 7);
+  min-width: 130px;
 }
 
 .time-cell {
-  background: #f5f7fa;
-  padding: 10px 5px !important;
+  background: linear-gradient(180deg, #f5f7fa 0%, #e4e7ed 100%);
+  padding: 8px 5px !important;
 }
 
 .period-num {
   font-weight: bold;
   color: #303133;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .period-time {
   font-size: 11px;
   color: #909399;
-  margin-top: 4px;
+  margin-top: 3px;
+}
+
+.period-divider td {
+  border-bottom: 2px solid #409EFF !important;
 }
 
 .course-cell {
-  height: 70px;
+  height: 90px;
   padding: 4px !important;
   vertical-align: middle !important;
+  background: #fff;
 }
 
 .course-card {
   height: 100%;
+  min-height: 80px;
   border-radius: 6px;
-  padding: 8px;
+  padding: 6px 8px;
   color: #fff;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-  transition: transform 0.2s;
+  justify-content: space-between;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
   cursor: pointer;
+  overflow: hidden;
 }
 
 .course-card:hover {
-  transform: scale(1.02);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .course-name {
   font-weight: bold;
   font-size: 13px;
-  margin-bottom: 4px;
+  line-height: 1.3;
+  max-height: 34px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.course-info {
+  font-size: 10px;
+  opacity: 0.85;
+}
+
+.course-code {
+  background: rgba(255,255,255,0.2);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.course-location {
+  font-size: 11px;
+  opacity: 0.9;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -346,12 +409,6 @@ export default {
 .course-students {
   font-size: 11px;
   opacity: 0.9;
-}
-
-.course-location {
-  font-size: 10px;
-  opacity: 0.8;
-  margin-top: 2px;
 }
 
 .course-summary {
@@ -376,5 +433,18 @@ export default {
 
 .course-detail {
   padding: 10px 0;
+}
+
+/* 响应式调整 */
+@media screen and (max-width: 1200px) {
+  .day-col {
+    min-width: 110px;
+  }
+  .course-cell {
+    height: 85px;
+  }
+  .course-name {
+    font-size: 12px;
+  }
 }
 </style>

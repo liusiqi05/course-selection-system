@@ -82,10 +82,10 @@ public class EduTermController extends BaseController
      * 获取学期选项列表（不需要权限，用于下拉选择）
      */
     @GetMapping("/options")
-    public TableDataInfo options()
+    public AjaxResult options()
     {
         List<EduTerm> list = eduTermService.selectEduTermList(new EduTerm());
-        return getDataTable(list);
+        return success(list);
     }
 
     /**

@@ -9,6 +9,7 @@ import com.ruoyi.education.mapper.EduTermMapper;
 import com.ruoyi.education.mapper.EduCourseOpeningMapper;
 import com.ruoyi.education.domain.EduTerm;
 import com.ruoyi.education.service.IEduTermService;
+import com.ruoyi.education.service.IEduCourseApplyService;
 
 /**
  * 学期信息Service业务层处理
@@ -24,6 +25,9 @@ public class EduTermServiceImpl implements IEduTermService
 
     @Autowired
     private EduCourseOpeningMapper eduCourseOpeningMapper;
+
+    @Autowired
+    private IEduCourseApplyService eduCourseApplyService;
 
     /**
      * 查询学期信息
@@ -102,11 +106,38 @@ public class EduTermServiceImpl implements IEduTermService
         {
             // 获取之前的当前学期
             EduTerm oldCurrentTerm = eduTermMapper.selectCurrentTerm();
+            
+            // 检查之前学期是否所有成绩都已录入
+            if (oldCurrentTerm != null && !oldCurrentTerm.getTermId().equals(eduTerm.getTermId()))
+            {
+                int pendingCount = eduCourseOpeningMapper.countPendingScoreByTermId(oldCurrentTerm.getTermId());
+                if (pendingCount > 0)
+                {
+                    throw new com.ruoyi.common.exception.ServiceException(
+                        "无法切换学期：当前学期还有 " + pendingCount + " 个学生的成绩未录入，请先完成成绩录入！");
+                }
+            }
+            
             eduTermMapper.resetCurrentTerm();
             // 将之前学期的所有课程设为已结课（status='1'）
             if (oldCurrentTerm != null && !oldCurrentTerm.getTermId().equals(eduTerm.getTermId()))
             {
                 eduCourseOpeningMapper.closeTermCourses(oldCurrentTerm.getTermId());
+            }
+            
+            // 将新学期已批准的开课申请转换为开课安排
+            int convertedCount = eduCourseApplyService.convertApprovedToOpening(eduTerm.getTermId());
+            if (convertedCount > 0)
+            {
+                // 记录转换日志（可选）
+                System.out.println("学期切换：已将 " + convertedCount + " 个已批准的开课申请转换为开课安排");
+            }
+            
+            // 将新学期的所有课程设为可选状态（开放选课）
+            int openedCount = eduCourseOpeningMapper.openTermCourses(eduTerm.getTermId());
+            if (openedCount > 0)
+            {
+                System.out.println("学期切换：已开放 " + openedCount + " 门课程的选课");
             }
         }
         return eduTermMapper.updateEduTerm(eduTerm);

@@ -92,6 +92,14 @@ public interface EduCourseOpeningMapper
     public int closeTermCourses(Long termId);
 
     /**
+     * 将指定学期的所有课程设为可选课（开放选课）
+     * 
+     * @param termId 学期ID
+     * @return 结果
+     */
+    public int openTermCourses(Long termId);
+
+    /**
      * 查询教师待打分的课程列表（已结课但有学生未打分）
      * 
      * @param teacherId 教师ID
@@ -108,4 +116,59 @@ public interface EduCourseOpeningMapper
      */
     public List<EduCourseOpening> selectByStudentAndTerm(@org.apache.ibatis.annotations.Param("studentId") Long studentId, 
                                                           @org.apache.ibatis.annotations.Param("termId") Long termId);
+
+    /**
+     * 查询教师课程列表（包含待录入人数）
+     * 
+     * @param eduCourseOpening 开课安排
+     * @return 课程列表
+     */
+    public List<EduCourseOpening> selectTeacherCoursesWithPending(EduCourseOpening eduCourseOpening);
+
+    /**
+     * 检查学期是否有未录入成绩的课程
+     * 
+     * @param termId 学期ID
+     * @return 未录入成绩的数量
+     */
+    public int countPendingScoreByTermId(Long termId);
+
+    /**
+     * 查询学期中所有课程（包含待录入人数，管理员用）
+     * 
+     * @param termId 学期ID
+     * @return 课程列表
+     */
+    public List<EduCourseOpening> selectTermCoursesWithPending(Long termId);
+
+    /**
+     * 查询指定学期的开课数量
+     * 
+     * @param termId 学期ID
+     * @return 开课数量
+     */
+    public int selectCourseCountByTermId(Long termId);
+
+    /**
+     * 结课操作
+     * 
+     * @param openId 开课ID
+     * @return 结果
+     */
+    public int finishCourse(Long openId);
+
+    /**
+     * 取消结课
+     * 
+     * @param openId 开课ID
+     * @return 结果
+     */
+    public int cancelFinishCourse(Long openId);
+
+    /**
+     * 调用存储过程重新计算课程的所有学生成绩
+     * 
+     * @param openId 开课ID
+     */
+    public void recalcCourseScores(Long openId);
 }

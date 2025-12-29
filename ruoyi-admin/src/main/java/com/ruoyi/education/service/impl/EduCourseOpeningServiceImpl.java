@@ -142,4 +142,63 @@ public class EduCourseOpeningServiceImpl implements IEduCourseOpeningService
     {
         return eduCourseOpeningMapper.selectPendingScoreCourses(teacherId);
     }
+
+    /**
+     * 查询教师课程列表（包含待录入人数）
+     * 
+     * @param eduCourseOpening 开课安排
+     * @return 课程列表
+     */
+    @Override
+    public List<EduCourseOpening> selectTeacherCoursesWithPending(EduCourseOpening eduCourseOpening)
+    {
+        return eduCourseOpeningMapper.selectTeacherCoursesWithPending(eduCourseOpening);
+    }
+
+    /**
+     * 查询学期所有课程（包含待录入人数，管理员用）
+     * 
+     * @param termId 学期ID
+     * @return 课程列表
+     */
+    @Override
+    public List<EduCourseOpening> selectTermCoursesWithPending(Long termId)
+    {
+        return eduCourseOpeningMapper.selectTermCoursesWithPending(termId);
+    }
+
+    /**
+     * 结课操作
+     * 
+     * @param openId 开课ID
+     * @return 结果
+     */
+    @Override
+    public int finishCourse(Long openId)
+    {
+        return eduCourseOpeningMapper.finishCourse(openId);
+    }
+
+    /**
+     * 取消结课
+     * 
+     * @param openId 开课ID
+     * @return 结果
+     */
+    @Override
+    public int cancelFinishCourse(Long openId)
+    {
+        return eduCourseOpeningMapper.cancelFinishCourse(openId);
+    }
+
+    /**
+     * 调用存储过程重新计算课程的所有学生成绩（占比变更时保持数据一致性）
+     * 
+     * @param openId 开课ID
+     */
+    @Override
+    public void recalcCourseScores(Long openId)
+    {
+        eduCourseOpeningMapper.recalcCourseScores(openId);
+    }
 }
