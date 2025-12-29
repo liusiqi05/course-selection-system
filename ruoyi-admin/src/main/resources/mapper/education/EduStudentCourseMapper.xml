@@ -66,7 +66,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <include refid="selectEduStudentCourseVo"/>
         <where>  
             <if test="studentId != null"> and sc.student_id = #{studentId}</if>
-            <if test="studentNo != null and studentNo != ''"> and su.student_id like concat('%', #{studentNo}, '%')</if>
+            <if test="studentNo != null and studentNo != ''"> and su.user_name like concat('%', #{studentNo}, '%')</if>
             <if test="studentName != null and studentName != ''"> and su.nick_name like concat('%', #{studentName}, '%')</if>
             <if test="openId != null"> and sc.open_id = #{openId}</if>
             <if test="termId != null"> and o.term_id = #{termId}</if>
