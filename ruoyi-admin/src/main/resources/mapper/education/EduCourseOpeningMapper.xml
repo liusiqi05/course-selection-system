@@ -34,7 +34,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 
     <sql id="selectEduCourseOpeningVo">
         select o.open_id, o.term_id, o.course_id, o.teacher_id, o.class_time, o.class_location, 
-               o.max_students, o.selected_num, o.status, o.score_deadline, o.is_finished, o.finish_time,
+               o.max_students, 
+               (select count(*) from edu_student_course sc where sc.open_id = o.open_id and sc.status != '2') as selected_num,
+               o.status, o.score_deadline, o.is_finished, o.finish_time,
                o.usual_ratio, o.exam_ratio,
                o.create_by, o.create_time, o.update_by, o.update_time, o.remark,
                t.term_name,
@@ -50,7 +52,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <!-- 避免可选课程列表重复的查询片段（带distinct） -->
     <sql id="selectEduCourseOpeningVoDistinct">
         select distinct o.open_id, o.term_id, o.course_id, o.teacher_id, o.class_time, o.class_location,
-               o.max_students, o.selected_num, o.status, o.score_deadline, o.is_finished, o.finish_time,
+               o.max_students, 
+               (select count(*) from edu_student_course sc where sc.open_id = o.open_id and sc.status != '2') as selected_num,
+               o.status, o.score_deadline, o.is_finished, o.finish_time,
                o.usual_ratio, o.exam_ratio,
                o.create_by, o.create_time, o.update_by, o.update_time, o.remark,
                t.term_name,
@@ -175,24 +179,28 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 
     <select id="selectPendingScoreCourses" parameterType="Long" resultMap="EduCourseOpeningResult">
         select o.open_id, o.term_id, o.course_id, o.teacher_id, o.class_time, o.class_location, 
-               o.max_students, o.selected_num, o.status, o.score_deadline, t.term_name, c.course_code, c.course_name, c.credit,
-               (select count(*) from edu_student_course sc where sc.open_id = o.open_id and sc.score is null) as pending_count
+               o.max_students, 
+               (select count(*) from edu_student_course sc where sc.open_id = o.open_id and sc.status != '2') as selected_num,
+               o.status, o.score_deadline, t.term_name, c.course_code, c.course_name, c.credit,
+               (select count(*) from edu_student_course sc where sc.open_id = o.open_id and sc.score is null and sc.status = '0') as pending_count
         from edu_course_opening o
         left join edu_term t on o.term_id = t.term_id
         left join edu_course c on o.course_id = c.course_id
         where o.teacher_id = #{teacherId}
           and o.status = '1'
-          and exists (select 1 from edu_student_course sc where sc.open_id = o.open_id and sc.score is null)
+          and exists (select 1 from edu_student_course sc where sc.open_id = o.open_id and sc.score is null and sc.status = '0')
         order by o.term_id desc, o.open_id
     </select>
 
     <!-- 教师的课程列表，包含待录入人数 -->
     <select id="selectTeacherCoursesWithPending" parameterType="com.ruoyi.education.domain.EduCourseOpening" resultMap="EduCourseOpeningResult">
         select o.open_id, o.term_id, o.course_id, o.teacher_id, o.class_time, o.class_location, 
-               o.max_students, o.selected_num, o.status, o.score_deadline, o.create_by, o.create_time, 
+               o.max_students, 
+               (select count(*) from edu_student_course sc where sc.open_id = o.open_id and sc.status != '2') as selected_num,
+               o.status, o.score_deadline, o.create_by, o.create_time, 
                o.update_by, o.update_time, o.remark,
                t.term_name, c.course_code, c.course_name, c.credit, u.nick_name as teacher_name,
-               (select count(*) from edu_student_course sc where sc.open_id = o.open_id and sc.score is null) as pending_count
+               (select count(*) from edu_student_course sc where sc.open_id = o.open_id and sc.score is null and sc.status = '0') as pending_count
         from edu_course_opening o
         left join edu_term t on o.term_id = t.term_id
         left join edu_course c on o.course_id = c.course_id
@@ -223,15 +231,17 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <select id="countPendingScoreByTermId" parameterType="Long" resultType="int">
         select count(*) from edu_student_course sc
         inner join edu_course_opening o on sc.open_id = o.open_id
-        where o.term_id = #{termId} and sc.score is null
+        where o.term_id = #{termId} and sc.score is null and sc.status = '0'
     </select>
 
     <!-- 查询学期中未完成成绩录入的课程列表（管理员用） -->
     <select id="selectTermCoursesWithPending" parameterType="Long" resultMap="EduCourseOpeningResult">
         select o.open_id, o.term_id, o.course_id, o.teacher_id, o.class_time, o.class_location, 
-               o.max_students, o.selected_num, o.status, o.score_deadline, t.term_name, 
+               o.max_students, 
+               (select count(*) from edu_student_course sc where sc.open_id = o.open_id and sc.status != '2') as selected_num,
+               o.status, o.score_deadline, t.term_name, 
                c.course_code, c.course_name, c.credit, u.nick_name as teacher_name,
-               (select count(*) from edu_student_course sc where sc.open_id = o.open_id and sc.score is null) as pending_count
+               (select count(*) from edu_student_course sc where sc.open_id = o.open_id and sc.score is null and sc.status = '0') as pending_count
         from edu_course_opening o
         left join edu_term t on o.term_id = t.term_id
         left join edu_course c on o.course_id = c.course_id

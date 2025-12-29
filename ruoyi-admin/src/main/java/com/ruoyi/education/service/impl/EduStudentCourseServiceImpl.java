@@ -139,6 +139,7 @@ public class EduStudentCourseServiceImpl implements IEduStudentCourseService
         
         // 3. 检查是否已选该课程（任何状态都算重复）
         EduStudentCourse existing = eduStudentCourseMapper.checkSelected(studentId, openId);
+        boolean isReEnroll = false;
         if (existing != null)
         {
             // 根据不同的status返回不同提示
@@ -146,6 +147,9 @@ public class EduStudentCourseServiceImpl implements IEduStudentCourseService
                 return AjaxResult.error("您已选择该课程，请勿重复选择");
             } else if ("1".equals(existing.getStatus())) {
                 return AjaxResult.error("该课程已结课，无法重复选择");
+            } else if ("2".equals(existing.getStatus())) {
+                // 状态为2表示已退课，允许重新选课
+                isReEnroll = true;
             } else {
                 return AjaxResult.error("您与该课程已有关联记录，无法重复选择");
             }
@@ -170,21 +174,33 @@ public class EduStudentCourseServiceImpl implements IEduStudentCourseService
         }
         
         // 5. 检查上课时间是否冲突
-        String conflictResult = checkTimeConflict(studentId, opening.getTermId(), opening.getClassTime(), null);
+        // 如果是重新选课，需要排除当前课程ID，避免与自己冲突（虽然checkTimeConflict逻辑中已选课程列表通常是status='0'的，但为了保险起见）
+        String conflictResult = checkTimeConflict(studentId, opening.getTermId(), opening.getClassTime(), isReEnroll ? openId : null);
         if (conflictResult != null)
         {
             return AjaxResult.error(conflictResult);
         }
         
-        // 6. 创建选课记录
+        // 6. 创建或更新选课记录
         try {
-            EduStudentCourse studentCourse = new EduStudentCourse();
-            studentCourse.setStudentId(studentId);
-            studentCourse.setOpenId(openId);
-            studentCourse.setEnrollTime(new Date());
-            studentCourse.setStatus("0"); // 正常状态
-            studentCourse.setCreateTime(DateUtils.getNowDate());
-            eduStudentCourseMapper.insertEduStudentCourse(studentCourse);
+            if (isReEnroll) {
+                // 重新选课：更新原有记录状态为0
+                EduStudentCourse updateCourse = new EduStudentCourse();
+                updateCourse.setScId(existing.getScId());
+                updateCourse.setStatus("0");
+                updateCourse.setEnrollTime(new Date());
+                updateCourse.setUpdateTime(DateUtils.getNowDate());
+                eduStudentCourseMapper.updateEduStudentCourse(updateCourse);
+            } else {
+                // 新选课：插入新记录
+                EduStudentCourse studentCourse = new EduStudentCourse();
+                studentCourse.setStudentId(studentId);
+                studentCourse.setOpenId(openId);
+                studentCourse.setEnrollTime(new Date());
+                studentCourse.setStatus("0"); // 正常状态
+                studentCourse.setCreateTime(DateUtils.getNowDate());
+                eduStudentCourseMapper.insertEduStudentCourse(studentCourse);
+            }
             
             // 7. 更新已选人数
             eduCourseOpeningMapper.incrementSelectedNum(openId);

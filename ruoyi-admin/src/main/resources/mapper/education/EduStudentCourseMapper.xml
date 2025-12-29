@@ -85,8 +85,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 
     <select id="selectStudentsByOpenId" parameterType="Long" resultMap="EduStudentCourseResult">
         <include refid="selectEduStudentCourseVo"/>
-        where sc.open_id = #{openId}
-        order by su.student_id
+        where sc.open_id = #{openId} 
+          and (sc.status = '0' or (sc.status = '1' and sc.score is not null))
+        order by sc.student_id
     </select>
     
     <select id="selectEduStudentCourseByScId" parameterType="Long" resultMap="EduStudentCourseResult">
@@ -205,7 +206,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </update>
 
     <update id="withdrawCourse">
-        update edu_student_course set status = '1', update_time = sysdate() 
+        update edu_student_course set status = '2', update_time = sysdate() 
         where student_id = #{studentId} and open_id = #{openId} and status = '0'
     </update>
 

@@ -262,6 +262,16 @@ public class EduStudentCourseController extends BaseController
         {
             return error("无权操作此课程");
         }
+
+        // 检查是否超过录入截止时间
+        if (opening.getScoreDeadline() != null && new java.util.Date().after(opening.getScoreDeadline()))
+        {
+            // 只有管理员和教务处老师可以录入
+            if (!SecurityUtils.isAdmin(userId) && !SecurityUtils.hasRole("leader"))
+            {
+                return error("已超过成绩录入截止时间，请联系教务处");
+            }
+        }
         // 计算总成绩：平时成绩 * 40% + 考试成绩 * 60%
         EduStudentCourse updateObj = new EduStudentCourse();
         updateObj.setScId(eduStudentCourse.getScId());
@@ -318,6 +328,16 @@ public class EduStudentCourseController extends BaseController
             
             EduCourseOpening opening = eduCourseOpeningService.selectEduCourseOpeningByOpenId(existing.getOpenId());
             if (opening == null || !opening.getTeacherId().equals(teacher.getTeacherId())) continue;
+
+            // 检查是否超过录入截止时间
+            if (opening.getScoreDeadline() != null && new java.util.Date().after(opening.getScoreDeadline()))
+            {
+                // 只有管理员和教务处老师可以录入
+                if (!SecurityUtils.isAdmin(userId) && !SecurityUtils.hasRole("leader"))
+                {
+                    continue; // 跳过该记录
+                }
+            }
             
             openIdToUpdate = existing.getOpenId();
             
