@@ -150,6 +150,7 @@
 <script>
 import { mapGetters } from 'vuex'
 import { getCurrentTerm } from "@/api/education/term"
+import { listNotice } from "@/api/system/notice"
 import request from '@/utils/request'
 
 export default {
@@ -184,11 +185,7 @@ export default {
         myScore: { name: '成绩查询', path: '/education/myScore', icon: 'el-icon-trophy', color: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
         courseTable: { name: '我的课表', path: '/education/schedule/student', icon: 'el-icon-date', color: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' }
       },
-      notices: [
-        { tag: '重要', type: 'danger', title: '2025-2026学年第一学期选课已开始', date: '2025-12-20' },
-        { tag: '通知', type: 'warning', title: '选课时间：12月20日-12月30日', date: '2025-12-18' },
-        { tag: '提示', type: 'info', title: '请同学们合理安排选课时间，避免课程冲突', date: '2025-12-15' }
-      ]
+      notices: []
     }
   },
   computed: {
@@ -266,6 +263,7 @@ export default {
   created() {
     this.loadCurrentTerm()
     this.loadStatistics()
+    this.loadNotices()
   },
   methods: {
     goTo(path) {
@@ -300,6 +298,36 @@ export default {
         this.courseCount = 0
         this.studentCount = 0
         this.teacherCount = 0
+      })
+    },
+    loadNotices() {
+      listNotice({ pageNum: 1, pageSize: 5, status: '0' }).then(res => {
+        if (res.rows && res.rows.length > 0) {
+          this.notices = res.rows.map(notice => {
+            // 将数据库字段映射到前端显示格式
+            let tag = '提示'
+            let type = 'info'
+            
+            // notice_type: 1-通知公告 2-系统消息
+            // 这里根据notice_type或其他字段来决定标签
+            if (notice.noticeType === '1') {
+              tag = '通知'
+              type = 'warning'
+            } else if (notice.noticeType === '2') {
+              tag = '重要'
+              type = 'danger'
+            }
+            
+            return {
+              tag: tag,
+              type: type,
+              title: notice.noticeTitle,
+              date: notice.createTime ? notice.createTime.substring(0, 10) : ''
+            }
+          })
+        }
+      }).catch(error => {
+        console.error('获取公告失败:', error)
       })
     }
   }
